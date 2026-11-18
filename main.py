@@ -236,6 +236,12 @@ def init_db():
         )
     """)
 
+    # Keep common ranking, order-history and matchmaking lookups fast.
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_users_referrals ON users(referrals DESC, user_id ASC)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id, id DESC)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_xo_rooms_queue ON xo_rooms(status, updated_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_checkers_rooms_queue ON checkers_rooms(status, updated_at)")
+
     con.commit()
     con.close()
 
