@@ -6,6 +6,7 @@ import hmac
 import hashlib
 import json
 import time
+import uuid
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from urllib.parse import parse_qsl
@@ -86,6 +87,19 @@ def init_db():
             user_id INTEGER,
             claim_date TEXT,
             UNIQUE(user_id, claim_date)
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS xo_rooms (
+            room_id TEXT PRIMARY KEY,
+            player_x INTEGER NOT NULL,
+            player_o INTEGER,
+            board TEXT NOT NULL DEFAULT '["","","","","","","","",""]',
+            turn TEXT NOT NULL DEFAULT 'X',
+            status TEXT NOT NULL DEFAULT 'waiting',
+            winner TEXT NOT NULL DEFAULT '',
+            updated_at REAL NOT NULL
         )
     """)
 
@@ -765,6 +779,153 @@ async def api_orders(request):
     ]})
 
 
+def xo_winner(board):
+    for a, b, c in ((0,1,2),(3,4,5),(6,7,8),(0,3,6),(1,4,7),(2,5,8),(0,4,8),(2,4,6)):
+        if board[a] and board[a] == board[b] == board[c]:
+            return board[a]
+    return "draw" if all(board) else ""
+
+
+async def api_xo_queue(request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+    user = validate_webapp_init_data(payload.get("initData", ""))
+    if not user:
+        return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
+    user_id = int(user["id"])
+    con = db()
+    cur = con.cursor()
+    try:
+        cur.execute("BEGIN IMMEDIATE")
+        cur.execute(
+            "SELECT room_id, player_x, player_o, status FROM xo_rooms "
+            "WHERE (player_x=? OR player_o=?) AND status IN ('waiting','playing') "
+            "ORDER BY updated_at DESC LIMIT 1",
+            (user_id, user_id)
+        )
+        own = cur.fetchone()
+        if own:
+            room_id, px, po, status = own
+            symbol = "X" if px == user_id else "O"
+        else:
+            cur.execute(
+                "SELECT room_id, player_x FROM xo_rooms "
+                "WHERE status='waiting' AND player_o IS NULL AND player_x<>? "
+                "ORDER BY updated_at ASC LIMIT 1",
+                (user_id,)
+            )
+            waiting = cur.fetchone()
+            if waiting:
+                room_id, px = waiting
+                cur.execute(
+                    "UPDATE xo_rooms SET player_o=?, status='playing', updated_at=? "
+                    "WHERE room_id=? AND player_o IS NULL AND status='waiting'",
+                    (user_id, time.time(), room_id)
+                )
+                symbol = "O"
+                status = "playing"
+            else:
+                room_id = uuid.uuid4().hex[:10].upper()
+                cur.execute(
+                    "INSERT INTO xo_rooms (room_id, player_x, updated_at) VALUES (?, ?, ?)",
+                    (room_id, user_id, time.time())
+                )
+                symbol = "X"
+                status = "waiting"
+        con.commit()
+        return web.json_response({"ok": True, "room_id": room_id, "symbol": symbol, "status": status})
+    except sqlite3.Error:
+        con.rollback()
+        return web.json_response({"error": "O‘yin xonasini yaratib bo‘lmadi"}, status=500)
+    finally:
+        con.close()
+
+
+async def api_xo_state(request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+    user = validate_webapp_init_data(payload.get("initData", ""))
+    if not user:
+        return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
+    room_id = str(payload.get("room_id", ""))[:20]
+    con = db()
+    cur = con.cursor()
+    cur.execute(
+        "SELECT player_x, player_o, board, turn, status, winner FROM xo_rooms WHERE room_id=?",
+        (room_id,)
+    )
+    row = cur.fetchone()
+    con.close()
+    if not row or int(user["id"]) not in (row[0], row[1]):
+        return web.json_response({"error": "O‘yin xonasi topilmadi"}, status=404)
+    symbol = "X" if int(user["id"]) == row[0] else "O"
+    return web.json_response({
+        "ok": True, "board": json.loads(row[2]), "turn": row[3],
+        "status": row[4], "winner": row[5], "symbol": symbol,
+        "opponent_connected": row[0] is not None and row[1] is not None
+    })
+
+
+async def api_xo_move(request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+    user = validate_webapp_init_data(payload.get("initData", ""))
+    if not user:
+        return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
+    room_id = str(payload.get("room_id", ""))[:20]
+    try:
+        cell = int(payload.get("cell", -1))
+    except (TypeError, ValueError):
+        cell = -1
+    if cell < 0 or cell > 8:
+        return web.json_response({"error": "Katak noto‘g‘ri"}, status=400)
+    con = db()
+    cur = con.cursor()
+    try:
+        cur.execute("BEGIN IMMEDIATE")
+        cur.execute(
+            "SELECT player_x, player_o, board, turn, status FROM xo_rooms WHERE room_id=?",
+            (room_id,)
+        )
+        row = cur.fetchone()
+        if not row or int(user["id"]) not in (row[0], row[1]):
+            con.rollback()
+            return web.json_response({"error": "O‘yin xonasi topilmadi"}, status=404)
+        symbol = "X" if int(user["id"]) == row[0] else "O"
+        if row[4] != "playing" or row[1] is None:
+            con.rollback()
+            return web.json_response({"error": "Raqib hali ulanmagan"}, status=409)
+        if row[3] != symbol:
+            con.rollback()
+            return web.json_response({"error": "Hozir sizning navbatingiz emas"}, status=409)
+        board = json.loads(row[2])
+        if board[cell]:
+            con.rollback()
+            return web.json_response({"error": "Bu katak band"}, status=409)
+        board[cell] = symbol
+        result = xo_winner(board)
+        status = "finished" if result else "playing"
+        winner = result if result else ""
+        next_turn = "O" if symbol == "X" else "X"
+        cur.execute(
+            "UPDATE xo_rooms SET board=?, turn=?, status=?, winner=?, updated_at=? WHERE room_id=?",
+            (json.dumps(board), next_turn, status, winner, time.time(), room_id)
+        )
+        con.commit()
+        return web.json_response({"ok": True, "board": board, "status": status, "winner": winner})
+    except sqlite3.Error:
+        con.rollback()
+        return web.json_response({"error": "Yurishni saqlab bo‘lmadi"}, status=500)
+    finally:
+        con.close()
+
+
 async def mini_app_home(request):
     page = Path(__file__).parent / "webapp" / "index.html"
     if not page.exists():
@@ -780,6 +941,9 @@ async def start_web_server():
     app.router.add_post("/api/promo", api_promo)
     app.router.add_post("/api/orders/create", api_create_order)
     app.router.add_post("/api/orders", api_orders)
+    app.router.add_post("/api/xo/queue", api_xo_queue)
+    app.router.add_post("/api/xo/state", api_xo_state)
+    app.router.add_post("/api/xo/move", api_xo_move)
     app.router.add_get("/health", lambda request: web.json_response({"ok": True, "app": "iDonat Robot"}))
     runner = web.AppRunner(app)
     await runner.setup()
