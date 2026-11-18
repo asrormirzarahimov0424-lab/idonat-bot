@@ -409,6 +409,38 @@ async def numbers(message: Message):
 async def orders(message: Message):
     await message.answer("📦 Hozircha buyurtmalaringiz yo‘q.")
 
+@dp.message(Command("orderstatus"))
+async def order_status_admin(message: Message):
+    if message.from_user.id != ADMIN_ID or ADMIN_ID == 0:
+        return
+    parts = message.text.split(maxsplit=2)
+    if len(parts) != 3 or not parts[1].isdigit() or parts[2] not in ("approved", "rejected"):
+        await message.answer(
+            "Buyurtma holatini o‘zgartirish:\n"
+            "/orderstatus ID approved\n"
+            "yoki\n/orderstatus ID rejected"
+        )
+        return
+    order_id = int(parts[1])
+    status = parts[2]
+    con = db()
+    cur = con.cursor()
+    cur.execute("SELECT user_id FROM orders WHERE id=?", (order_id,))
+    row = cur.fetchone()
+    if not row:
+        con.close()
+        await message.answer("Bunday buyurtma topilmadi.")
+        return
+    cur.execute("UPDATE orders SET status=? WHERE id=?", (status, order_id))
+    con.commit()
+    con.close()
+    label = "tasdiqlandi" if status == "approved" else "rad etildi"
+    try:
+        await bot.send_message(row[0], f"📦 <b>#{order_id}</b> buyurtmangiz {label}.")
+    except Exception:
+        pass
+    await message.answer(f"Buyurtma #{order_id} holati yangilandi: {label}.")
+
 
 @dp.message(F.text == "👨‍💻 Yordam")
 async def help_user(message: Message):
