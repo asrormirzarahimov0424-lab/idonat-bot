@@ -16,6 +16,7 @@ Telegram bot va Telegram Mini App (Python, aiogram, aiohttp, SQLite).
 ## Hozir ishlaydigan qismlar
 
 - Telegram bot menyusi va Mini App ochish tugmasi.
+- Bot buyruqlari: /start, /app, /balance, /orders, /referral, /top, /language, /cancel, /help.
 - Telegram Mini App `initData` imzosini tekshirish.
 - Kunlik 50 so‘m bonus (bir foydalanuvchiga kuniga bir marta).
 - Referal havolasi va referal TOP 10.
@@ -31,6 +32,10 @@ Telegram bot va Telegram Mini App (Python, aiogram, aiohttp, SQLite).
 - iDonat AI, Premium obuna va mukofotli yutuqlar tizimi.
 
 Buyurtma yuborish hozircha faqat so‘rov yaratadi; provayder va to‘lov tizimi ulanmaguncha foydalanuvchidan pul yechilmaydi. PUBG UC faqat rasmiy yoki vakolatli yetkazib beruvchi orqali avtomatik berilishi kerak.
+
+## Avtomatik tekshiruvlar
+
+GitHub Actions har bir push va pull requestda Python sintaksisini, asosiy o‘yin/referal mantiqini va Mini App JavaScript sintaksisini tekshiradi.
 
 ## Xavfsizlik va saqlash
 
