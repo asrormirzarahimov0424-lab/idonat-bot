@@ -104,6 +104,19 @@ def init_db():
     """)
 
     cur.execute("""
+        CREATE TABLE IF NOT EXISTS checkers_rooms (
+            room_id TEXT PRIMARY KEY,
+            player_x INTEGER NOT NULL,
+            player_o INTEGER,
+            board TEXT NOT NULL,
+            turn TEXT NOT NULL DEFAULT 'X',
+            status TEXT NOT NULL DEFAULT 'waiting',
+            winner TEXT NOT NULL DEFAULT '',
+            updated_at REAL NOT NULL
+        )
+    """)
+
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
@@ -926,6 +939,95 @@ async def api_xo_move(request):
         con.close()
 
 
+async def api_checkers_queue(request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+    user = validate_webapp_init_data(payload.get("initData", ""))
+    if not user:
+        return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
+    uid = int(user["id"])
+    initial = [""] * 64
+    for r in range(3):
+        for c in range(8):
+            if (r+c)%2: initial[r*8+c] = "b"
+    for r in range(5,8):
+        for c in range(8):
+            if (r+c)%2: initial[r*8+c] = "w"
+    con=db(); cur=con.cursor()
+    try:
+        cur.execute("BEGIN IMMEDIATE")
+        cur.execute("SELECT room_id,player_x,player_o,status FROM checkers_rooms WHERE (player_x=? OR player_o=?) AND status IN ('waiting','playing') ORDER BY updated_at DESC LIMIT 1",(uid,uid))
+        own=cur.fetchone()
+        if own:
+            room_id,px,po,status=own
+            symbol="X" if px==uid else "O"
+        else:
+            cur.execute("SELECT room_id,player_x FROM checkers_rooms WHERE status='waiting' AND player_o IS NULL AND player_x<>? ORDER BY updated_at ASC LIMIT 1",(uid,))
+            waiting=cur.fetchone()
+            if waiting:
+                room_id,px=waiting
+                cur.execute("UPDATE checkers_rooms SET player_o=?,status='playing',updated_at=? WHERE room_id=? AND player_o IS NULL",(uid,time.time()))
+                symbol="O"
+            else:
+                room_id=uuid.uuid4().hex[:10].upper()
+                cur.execute("INSERT INTO checkers_rooms(room_id,player_x,board,updated_at) VALUES(?,?,?,?)",(room_id,uid,json.dumps(initial),time.time()))
+                symbol="X"
+        con.commit()
+        return web.json_response({"ok":True,"room_id":room_id,"symbol":symbol})
+    except sqlite3.Error:
+        con.rollback()
+        return web.json_response({"error":"Xona yaratilmadi"},status=500)
+    finally:
+        con.close()
+
+
+async def api_checkers_state(request):
+    try: payload=await request.json()
+    except Exception: return web.json_response({"error":"Noto‘g‘ri so‘rov"},status=400)
+    user=validate_webapp_init_data(payload.get("initData",""))
+    if not user: return web.json_response({"error":"Telegram orqali qayta oching"},status=401)
+    room_id=str(payload.get("room_id",""))[:20]
+    con=db(); cur=con.cursor()
+    cur.execute("SELECT player_x,player_o,board,turn,status,winner FROM checkers_rooms WHERE room_id=?",(room_id,))
+    row=cur.fetchone(); con.close()
+    if not row or int(user["id"]) not in (row[0],row[1]):
+        return web.json_response({"error":"O‘yin xonasi topilmadi"},status=404)
+    return web.json_response({"ok":True,"board":json.loads(row[2]),"turn":row[3],"status":row[4],"winner":row[5],"symbol":"X" if int(user["id"])==row[0] else "O"})
+
+
+async def api_checkers_move(request):
+    try: payload=await request.json()
+    except Exception: return web.json_response({"error":"Noto‘g‘ri so‘rov"},status=400)
+    user=validate_webapp_init_data(payload.get("initData",""))
+    if not user: return web.json_response({"error":"Telegram orqali qayta oching"},status=401)
+    room_id=str(payload.get("room_id",""))[:20]
+    board=payload.get("board")
+    turn=str(payload.get("turn",""))
+    status=str(payload.get("status","playing"))
+    winner=str(payload.get("winner",""))
+    if not isinstance(board,list) or len(board)!=64 or any(x not in ("","w","b","W","B") for x in board) or turn not in ("X","O") or status not in ("playing","finished") or winner not in ("","X","O","draw"):
+        return web.json_response({"error":"Yurish ma’lumotlari noto‘g‘ri"},status=400)
+    con=db(); cur=con.cursor()
+    try:
+        cur.execute("BEGIN IMMEDIATE")
+        cur.execute("SELECT player_x,player_o,turn,status FROM checkers_rooms WHERE room_id=?",(room_id,))
+        row=cur.fetchone()
+        if not row or int(user["id"]) not in (row[0],row[1]):
+            con.rollback(); return web.json_response({"error":"Xona topilmadi"},status=404)
+        symbol="X" if int(user["id"])==row[0] else "O"
+        if row[1] is None or row[3]!="playing" or row[2]!=symbol:
+            con.rollback(); return web.json_response({"error":"Hozir sizning navbatingiz emas"},status=409)
+        cur.execute("UPDATE checkers_rooms SET board=?,turn=?,status=?,winner=?,updated_at=? WHERE room_id=?",(json.dumps(board),turn,status,winner,time.time(),room_id))
+        con.commit()
+        return web.json_response({"ok":True})
+    except sqlite3.Error:
+        con.rollback(); return web.json_response({"error":"Yurish saqlanmadi"},status=500)
+    finally:
+        con.close()
+
+
 async def mini_app_home(request):
     page = Path(__file__).parent / "webapp" / "index.html"
     if not page.exists():
@@ -944,6 +1046,9 @@ async def start_web_server():
     app.router.add_post("/api/xo/queue", api_xo_queue)
     app.router.add_post("/api/xo/state", api_xo_state)
     app.router.add_post("/api/xo/move", api_xo_move)
+    app.router.add_post("/api/checkers/queue", api_checkers_queue)
+    app.router.add_post("/api/checkers/state", api_checkers_state)
+    app.router.add_post("/api/checkers/move", api_checkers_move)
     app.router.add_get("/health", lambda request: web.json_response({"ok": True, "app": "iDonat Robot"}))
     runner = web.AppRunner(app)
     await runner.setup()
