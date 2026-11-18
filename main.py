@@ -18,7 +18,9 @@ from aiogram.types import (
     Message,
     ReplyKeyboardMarkup,
     KeyboardButton,
-    WebAppInfo
+    WebAppInfo,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton
 )
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -190,6 +192,33 @@ async def start(message: Message):
         "🤖 <b>iDonat Robotga xush kelibsiz!</b>\n\n"
         "Kerakli bo‘limni tanlang.",
         reply_markup=main_keyboard()
+    )
+
+    if WEBAPP_URL.startswith("https://"):
+        await message.answer(
+            "🚀 <b>Mini ilovani shu tugma orqali oching:</b>",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(
+                    text="🚀 Mini ilovani ochish",
+                    web_app=WebAppInfo(url=WEBAPP_URL)
+                )]
+            ])
+        )
+
+
+@dp.message(Command("app"))
+async def open_mini_app(message: Message):
+    if not WEBAPP_URL.startswith("https://"):
+        await message.answer("Mini App manzili sozlanmagan. Administratorga murojaat qiling.")
+        return
+    await message.answer(
+        "🚀 <b>Mini ilovani ochish:</b>",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(
+                text="🚀 Mini ilovani ochish",
+                web_app=WebAppInfo(url=WEBAPP_URL)
+            )]
+        ])
     )
 
 
