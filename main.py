@@ -87,6 +87,17 @@ def init_db():
         )
     """)
 
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            service TEXT NOT NULL,
+            details TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at TEXT NOT NULL
+        )
+    """)
+
     con.commit()
     con.close()
 
@@ -588,6 +599,111 @@ async def api_daily_claim(request):
         con.close()
 
 
+
+async def api_promo(request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+    telegram_user = validate_webapp_init_data(payload.get("initData", ""))
+    if not telegram_user:
+        return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
+    code = str(payload.get("code", "")).strip().upper()
+    if not code or len(code) > 40:
+        return web.json_response({"error": "Promokodni to‘g‘ri kiriting"}, status=400)
+    user_id = int(telegram_user["id"])
+    con = db()
+    cur = con.cursor()
+    try:
+        cur.execute("BEGIN IMMEDIATE")
+        cur.execute("SELECT amount, limit_count, used_count FROM promo_codes WHERE code=?", (code,))
+        promo = cur.fetchone()
+        if not promo:
+            con.rollback()
+            return web.json_response({"error": "Promokod topilmadi"}, status=404)
+        amount, limit_count, used_count = promo
+        if used_count >= limit_count:
+            con.rollback()
+            return web.json_response({"error": "Promokod limiti tugagan"}, status=409)
+        cur.execute("SELECT 1 FROM promo_redemptions WHERE user_id=? AND code=?", (user_id, code))
+        if cur.fetchone():
+            con.rollback()
+            return web.json_response({"error": "Bu promokoddan avval foydalangansiz"}, status=409)
+        cur.execute("INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)",
+                    (user_id, telegram_user.get("username", "") or ""))
+        cur.execute("UPDATE users SET balance=balance+? WHERE user_id=?", (amount, user_id))
+        cur.execute("UPDATE promo_codes SET used_count=used_count+1 WHERE code=?", (code,))
+        cur.execute("INSERT INTO promo_redemptions (user_id, code) VALUES (?, ?)", (user_id, code))
+        cur.execute("SELECT balance FROM users WHERE user_id=?", (user_id,))
+        balance = cur.fetchone()[0]
+        con.commit()
+        return web.json_response({"ok": True, "amount": amount, "balance": balance})
+    except sqlite3.Error:
+        con.rollback()
+        return web.json_response({"error": "Bazada xatolik yuz berdi"}, status=500)
+    finally:
+        con.close()
+
+
+async def api_create_order(request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+    telegram_user = validate_webapp_init_data(payload.get("initData", ""))
+    if not telegram_user:
+        return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
+    service = str(payload.get("service", "")).strip()[:80]
+    details = str(payload.get("details", "")).strip()[:500]
+    if not service or not details:
+        return web.json_response({"error": "Xizmat va buyurtma ma’lumotlarini kiriting"}, status=400)
+    user_id = int(telegram_user["id"])
+    con = db()
+    cur = con.cursor()
+    cur.execute("INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)",
+                (user_id, telegram_user.get("username", "") or ""))
+    cur.execute(
+        "INSERT INTO orders (user_id, service, details, status, created_at) VALUES (?, ?, ?, 'pending', ?)",
+        (user_id, service, details, datetime.now(ZoneInfo("Asia/Tashkent")).isoformat(timespec="minutes"))
+    )
+    order_id = cur.lastrowid
+    con.commit()
+    con.close()
+    if ADMIN_ID:
+        try:
+            await bot.send_message(
+                ADMIN_ID,
+                f"🆕 <b>Yangi buyurtma #{order_id}</b>\\n"
+                f"Foydalanuvchi: <code>{user_id}</code>\\n"
+                f"Xizmat: {service}\\nMa’lumot: {details}"
+            )
+        except Exception:
+            pass
+    return web.json_response({"ok": True, "order_id": order_id, "status": "pending"})
+
+
+async def api_orders(request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+    telegram_user = validate_webapp_init_data(payload.get("initData", ""))
+    if not telegram_user:
+        return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
+    con = db()
+    cur = con.cursor()
+    cur.execute(
+        "SELECT id, service, details, status, created_at FROM orders WHERE user_id=? ORDER BY id DESC LIMIT 50",
+        (int(telegram_user["id"]),)
+    )
+    rows = cur.fetchall()
+    con.close()
+    return web.json_response({"orders": [
+        {"id": r[0], "service": r[1], "details": r[2], "status": r[3], "created_at": r[4]}
+        for r in rows
+    ]})
+
+
 async def mini_app_home(request):
     page = Path(__file__).parent / "webapp" / "index.html"
     if not page.exists():
@@ -600,6 +716,9 @@ async def start_web_server():
     app.router.add_get("/", mini_app_home)
     app.router.add_post("/api/me", api_me)
     app.router.add_post("/api/daily-claim", api_daily_claim)
+    app.router.add_post("/api/promo", api_promo)
+    app.router.add_post("/api/orders/create", api_create_order)
+    app.router.add_post("/api/orders", api_orders)
     app.router.add_get("/health", lambda request: web.json_response({"ok": True, "app": "iDonat Robot"}))
     runner = web.AppRunner(app)
     await runner.setup()
