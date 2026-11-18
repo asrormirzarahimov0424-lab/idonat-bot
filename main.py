@@ -77,12 +77,14 @@ async def send_language_prompt(target):
     await target.answer("🌐 <b>Tilni tanlang / Выберите язык / Choose your language</b>", reply_markup=language_keyboard())
 
 
-async def send_subscription_prompt(target):
-    await target.answer(
-        "🔒 <b>Botdan foydalanish uchun kanalimizga obuna bo‘ling.</b>\n\n"
-        "📢 @Cr7_Siu_Pubg kanaliga qo‘shiling, so‘ng «Obunani tekshirish» tugmasini bosing.",
-        reply_markup=subscription_keyboard()
-    )
+async def send_subscription_prompt(target, user_id=None):
+    uid = user_id or target.from_user.id
+    t = BOT_TEXT[user_language(uid)]
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=t["join"], url="https://t.me/Cr7_Siu_Pubg")],
+        [InlineKeyboardButton(text=t["check"], callback_data="check_subscription")]
+    ])
+    await target.answer(t["subscribe"], reply_markup=keyboard)
 
 
 async def finish_referral(user_id):
@@ -118,7 +120,7 @@ class AccessGate(BaseMiddleware):
             if subscribed is None:
                 await event.answer("⚠️ Botni @Cr7_Siu_Pubg kanaliga administrator qilib qo‘shing.")
             else:
-                await send_subscription_prompt(event)
+                await send_subscription_prompt(event, event.from_user.id)
             return
         return await handler(event, data)
 
@@ -316,9 +318,9 @@ async def start(message: Message):
     subscribed = await is_subscribed(user_id)
     if subscribed is not True:
         if subscribed is None:
-            await message.answer("⚠️ Botni @Cr7_Siu_Pubg kanaliga administrator qilib qo‘shing.")
+            await message.answer(tr(user_id, "sub_admin"))
         else:
-            await send_subscription_prompt(message)
+            await send_subscription_prompt(message, user_id)
         return
     await finish_referral(user_id)
     await set_chat_commands(message.chat.id, language)
@@ -349,9 +351,9 @@ async def choose_language(callback: CallbackQuery):
         await finish_referral(callback.from_user.id)
         await callback.message.answer(tr(callback.from_user.id, "home"), reply_markup=main_keyboard(callback.from_user.id))
     elif subscribed is False:
-        await send_subscription_prompt(callback.message)
+        await send_subscription_prompt(callback.message, callback.from_user.id)
     else:
-        await callback.message.answer("⚠️ Botni @Cr7_Siu_Pubg kanaliga administrator qilib qo‘shing.")
+        await callback.message.answer(tr(callback.from_user.id, "sub_admin"))
 
 
 @dp.callback_query(F.data == "check_subscription")
@@ -362,8 +364,8 @@ async def check_subscription(callback: CallbackQuery):
         await callback.answer(tr(callback.from_user.id, "sub_ok"))
         await callback.message.answer(tr(callback.from_user.id, "home"), reply_markup=main_keyboard(callback.from_user.id))
         if WEBAPP_URL.startswith("https://"):
-            await callback.message.answer("🚀 <b>Mini ilovani ochish:</b>", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-                InlineKeyboardButton(text="🚀 Mini ilovani ochish", web_app=WebAppInfo(url=WEBAPP_URL))
+            await callback.message.answer(tr(callback.from_user.id, "mini"), reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(text=tr(message.from_user.id, "app"), web_app=WebAppInfo(url=WEBAPP_URL))
             ]]))
     elif subscribed is False:
         await callback.answer(tr(callback.from_user.id, "sub_no"), show_alert=True)
@@ -380,12 +382,17 @@ async def open_mini_app(message: Message):
         "🚀 <b>Mini ilovani ochish:</b>",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(
-                text="🚀 Mini ilovani ochish",
+                text=tr(callback.from_user.id, "app"),
                 web_app=WebAppInfo(url=WEBAPP_URL)
             )]
         ])
     )
 
+
+
+@dp.message(Command("help"))
+async def help_command(message: Message):
+    await message.answer(tr(message.from_user.id, "help_info"), reply_markup=main_keyboard(message.from_user.id))
 
 
 @dp.message(Command("language"))
