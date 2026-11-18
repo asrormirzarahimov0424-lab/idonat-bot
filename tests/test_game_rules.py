@@ -1,6 +1,11 @@
 import asyncio
 import os
 import sqlite3
+import sys
+from pathlib import Path
+
+# Make the repository root importable when pytest collects this file.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 # aiogram only validates the token format during Bot construction; no API calls are made.
 os.environ.setdefault("BOT_TOKEN", "123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi")
