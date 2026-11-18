@@ -2,13 +2,16 @@
 import os
 import sqlite3
 import asyncio
+from pathlib import Path
+from aiohttp import web
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart, Command
 from aiogram.types import (
     Message,
     ReplyKeyboardMarkup,
-    KeyboardButton
+    KeyboardButton,
+    WebAppInfo
 )
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -18,6 +21,7 @@ load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
+WEBAPP_URL = os.getenv("WEBAPP_URL", "").strip()
 DB_NAME = "idonat_robot.db"
 
 if not BOT_TOKEN:
@@ -87,6 +91,7 @@ def get_user(user_id):
 def main_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
+            *([[KeyboardButton(text="🚀 Mini ilovani ochish", web_app=WebAppInfo(url=WEBAPP_URL))]] if WEBAPP_URL.startswith("https://") else []),
             [KeyboardButton(text="🛍 Xizmatlar")],
             [KeyboardButton(text="🎮 PUBG UC"),
              KeyboardButton(text="📞 Virtual raqamlar")],
@@ -405,10 +410,34 @@ async def other_messages(message: Message):
     )
 
 
+async def mini_app_home(request):
+    page = Path(__file__).parent / "webapp" / "index.html"
+    if not page.exists():
+        return web.Response(text="Mini App fayli topilmadi", status=404)
+    return web.FileResponse(page)
+
+
+async def start_web_server():
+    app = web.Application()
+    app.router.add_get("/", mini_app_home)
+    app.router.add_get("/health", lambda request: web.json_response({"ok": True, "app": "iDonat Robot"}))
+    runner = web.AppRunner(app)
+    await runner.setup()
+    port = int(os.getenv("PORT", "8080"))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    print(f"Mini App web server {port}-portda ishga tushdi")
+    return runner
+
+
 async def main():
     init_db()
     print("iDonat Robot ishga tushdi!")
-    await dp.start_polling(bot)
+    runner = await start_web_server()
+    try:
+        await dp.start_polling(bot)
+    finally:
+        await runner.cleanup()
 
 
 if __name__ == "__main__":
