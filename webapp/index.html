@@ -78,7 +78,7 @@ function applyLanguage(lang){
   const src=originalTextNodes.get(node),trim=src.trim();
   if(!trim)continue;
   const lead=src.match(/^\s*/)?.[0]||"",tail=src.match(/\s*$/)?.[0]||"";
-  node.nodeValue=lead+translated(trim)+tail;
+  const next=lead+translated(trim)+tail;if(node.nodeValue!==next)node.nodeValue=next;
  }
  document.querySelectorAll("input[placeholder],textarea[placeholder]").forEach(el=>{
   if(!originalPlaceholders.has(el))originalPlaceholders.set(el,el.placeholder);
