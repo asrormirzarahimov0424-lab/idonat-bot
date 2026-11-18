@@ -88,17 +88,31 @@ async def send_subscription_prompt(target, user_id=None):
 
 
 async def finish_referral(user_id):
+    # Claim the reward atomically so duplicate updates cannot pay twice.
     con = db()
     cur = con.cursor()
-    cur.execute("SELECT inviter, referral_rewarded FROM users WHERE user_id=?", (user_id,))
-    row = cur.fetchone()
-    if row and not row[1]:
-        inviter = row[0]
-        if inviter and inviter != user_id:
-            cur.execute("UPDATE users SET balance=balance+100, referrals=referrals+1 WHERE user_id=?", (inviter,))
-        cur.execute("UPDATE users SET referral_rewarded=1 WHERE user_id=?", (user_id,))
-    con.commit()
-    con.close()
+    try:
+        cur.execute("BEGIN IMMEDIATE")
+        cur.execute("SELECT inviter, referral_rewarded FROM users WHERE user_id=?", (user_id,))
+        row = cur.fetchone()
+        if row and not row[1]:
+            cur.execute(
+                "UPDATE users SET referral_rewarded=1 WHERE user_id=? AND referral_rewarded=0",
+                (user_id,)
+            )
+            if cur.rowcount == 1:
+                inviter = row[0]
+                if inviter and inviter != user_id:
+                    cur.execute(
+                        "UPDATE users SET balance=balance+100, referrals=referrals+1 WHERE user_id=?",
+                        (inviter,)
+                    )
+        con.commit()
+    except sqlite3.Error:
+        con.rollback()
+        raise
+    finally:
+        con.close()
 
 
 class AccessGate(BaseMiddleware):
@@ -129,12 +143,17 @@ dp.message.middleware(AccessGate())
 
 
 def db():
-    return sqlite3.connect(DB_NAME)
+    # Wait briefly for concurrent Telegram/API requests instead of failing immediately.
+    return sqlite3.connect(DB_NAME, timeout=20)
 
 
 def init_db():
+    Path(DB_NAME).parent.mkdir(parents=True, exist_ok=True)
     con = db()
     cur = con.cursor()
+    cur.execute("PRAGMA journal_mode=WAL")
+    cur.execute("PRAGMA synchronous=NORMAL")
+    cur.execute("PRAGMA busy_timeout=20000")
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -257,9 +276,9 @@ def tr(user_id,key):
 async def set_chat_commands(chat_id, language):
     from aiogram.types import BotCommand, BotCommandScopeChat
     commands={
-      "uz":[("start","Botni ishga tushirish"),("app","Mini ilovani ochish"),("balance","Balansni ko‘rish"),("referral","Referal havolasi"),("top","TOP 10"),("language","Tilni almashtirish"),("cancel","Amalni bekor qilish"),("help","Yordam")],
-      "ru":[("start","Запустить бота"),("app","Открыть Mini App"),("balance","Мой баланс"),("referral","Реферальная ссылка"),("top","ТОП 10"),("language","Сменить язык"),("cancel","Отменить действие"),("help","Помощь")],
-      "en":[("start","Start the bot"),("app","Open Mini App"),("balance","View balance"),("referral","Referral link"),("top","TOP 10"),("language","Change language"),("cancel","Cancel current action"),("help","Help")]
+      "uz":[("start","Botni ishga tushirish"),("app","Mini ilovani ochish"),("balance","Balansni ko‘rish"),("orders","Buyurtmalarim"),("referral","Referal havolasi"),("top","TOP 10"),("language","Tilni almashtirish"),("cancel","Amalni bekor qilish"),("help","Yordam")],
+      "ru":[("start","Запустить бота"),("app","Открыть Mini App"),("balance","Мой баланс"),("orders","Мои заказы"),("referral","Реферальная ссылка"),("top","ТОП 10"),("language","Сменить язык"),("cancel","Отменить действие"),("help","Помощь")],
+      "en":[("start","Start the bot"),("app","Open Mini App"),("balance","View balance"),("orders","My orders"),("referral","Referral link"),("top","TOP 10"),("language","Change language"),("cancel","Cancel current action"),("help","Help")]
     }
     try:
         await bot.set_my_commands(
@@ -371,7 +390,7 @@ async def check_subscription(callback: CallbackQuery):
         await callback.message.answer(tr(callback.from_user.id, "home"), reply_markup=main_keyboard(callback.from_user.id))
         if WEBAPP_URL.startswith("https://"):
             await callback.message.answer(tr(callback.from_user.id, "mini"), reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-                InlineKeyboardButton(text=tr(message.from_user.id, "app"), web_app=WebAppInfo(url=WEBAPP_URL))
+                InlineKeyboardButton(text=tr(callback.from_user.id, "app"), web_app=WebAppInfo(url=WEBAPP_URL))
             ]]))
     elif subscribed is False:
         await callback.answer(tr(callback.from_user.id, "sub_no"), show_alert=True)
@@ -629,7 +648,35 @@ async def numbers(message: Message):
 
 @dp.message(F.text.in_([BOT_TEXT[l]["orders"] for l in BOT_TEXT]))
 async def orders(message: Message):
-    await message.answer(tr(message.from_user.id, "orders_info"))
+    await show_user_orders(message)
+
+
+@dp.message(Command("orders"))
+async def orders_command(message: Message):
+    await show_user_orders(message)
+
+
+async def show_user_orders(message: Message):
+    con = db()
+    cur = con.cursor()
+    cur.execute(
+        "SELECT id, service, status, created_at FROM orders WHERE user_id=? ORDER BY id DESC LIMIT 10",
+        (message.from_user.id,)
+    )
+    rows = cur.fetchall()
+    con.close()
+    if not rows:
+        await message.answer(tr(message.from_user.id, "orders_info"))
+        return
+    labels = {"pending": "⏳ Kutilmoqda", "approved": "✅ Tasdiqlandi", "rejected": "❌ Rad etildi"}
+    lines = ["📦 <b>Oxirgi buyurtmalaringiz</b>", ""]
+    for order_id, service, status, created_at in rows:
+        lines.append(
+            f"#{order_id} · {html.escape(service)}\n"
+            f"{labels.get(status, html.escape(status))} · {html.escape(created_at)}"
+        )
+    await message.answer("\n\n".join(lines))
+
 
 @dp.message(Command("orderstatus"))
 async def order_status_admin(message: Message):
@@ -1004,6 +1051,12 @@ async def api_xo_queue(request):
     cur = con.cursor()
     try:
         cur.execute("BEGIN IMMEDIATE")
+        # Expire abandoned rooms so old queue entries do not trap new players.
+        cur.execute(
+            "UPDATE xo_rooms SET status='finished', winner='draw', updated_at=? "
+            "WHERE status IN ('waiting','playing') AND updated_at<?",
+            (time.time(), time.time() - 86400)
+        )
         cur.execute(
             "SELECT room_id, player_x, player_o, status FROM xo_rooms "
             "WHERE (player_x=? OR player_o=?) AND status IN ('waiting','playing') "
@@ -1150,8 +1203,12 @@ async def api_checkers_queue(request):
     con=db(); cur=con.cursor()
     try:
         cur.execute("BEGIN IMMEDIATE")
-        # Close legacy 8x8 rooms so users are not reconnected to an incompatible board.
-        cur.execute("UPDATE checkers_rooms SET status='finished',winner='draw',updated_at=? WHERE status IN ('waiting','playing') AND json_array_length(board)<>64",(time.time(),))
+        # Close abandoned or incompatible rooms before matching a new opponent.
+        cur.execute(
+            "UPDATE checkers_rooms SET status='finished',winner='draw',updated_at=? "
+            "WHERE status IN ('waiting','playing') AND (updated_at<? OR json_array_length(board)<>64)",
+            (time.time(), time.time() - 86400)
+        )
         cur.execute("SELECT room_id,player_x,player_o,status FROM checkers_rooms WHERE (player_x=? OR player_o=?) AND status IN ('waiting','playing') ORDER BY updated_at DESC LIMIT 1",(uid,uid))
         own=cur.fetchone()
         if own:
