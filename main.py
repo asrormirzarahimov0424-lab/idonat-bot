@@ -14,10 +14,11 @@ from urllib.parse import parse_qsl
 from pathlib import Path
 from aiohttp import web
 
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher, F, BaseMiddleware
 from aiogram.filters import CommandStart, Command
 from aiogram.types import (
     Message,
+    CallbackQuery,
     ReplyKeyboardMarkup,
     KeyboardButton,
     WebAppInfo,
@@ -33,6 +34,7 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 WEBAPP_URL = os.getenv("WEBAPP_URL", "").strip()
+REQUIRED_CHANNEL = "@Cr7_Siu_Pubg"
 DB_NAME = os.getenv("DB_PATH", "idonat_robot.db")
 
 if not BOT_TOKEN:
@@ -45,6 +47,83 @@ bot = Bot(
 dp = Dispatcher()
 
 promo_waiting = set()
+
+
+def language_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🇺🇿 O‘zbekcha", callback_data="lang:uz")],
+        [InlineKeyboardButton(text="🇷🇺 Русский", callback_data="lang:ru")],
+        [InlineKeyboardButton(text="🇬🇧 English", callback_data="lang:en")]
+    ])
+
+
+def subscription_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📢 Kanalga obuna bo‘lish", url="https://t.me/Cr7_Siu_Pubg")],
+        [InlineKeyboardButton(text="✅ Obunani tekshirish", callback_data="check_subscription")]
+    ])
+
+
+async def is_subscribed(user_id):
+    try:
+        member = await bot.get_chat_member(REQUIRED_CHANNEL, user_id)
+        return member.status in ("member", "administrator", "creator")
+    except Exception as exc:
+        print(f"Obuna tekshirish xatosi: {exc}")
+        return None
+
+
+async def send_language_prompt(target):
+    await target.answer("🌐 <b>Tilni tanlang / Выберите язык / Choose your language</b>", reply_markup=language_keyboard())
+
+
+async def send_subscription_prompt(target):
+    await target.answer(
+        "🔒 <b>Botdan foydalanish uchun kanalimizga obuna bo‘ling.</b>\n\n"
+        "📢 @Cr7_Siu_Pubg kanaliga qo‘shiling, so‘ng «Obunani tekshirish» tugmasini bosing.",
+        reply_markup=subscription_keyboard()
+    )
+
+
+async def finish_referral(user_id):
+    con = db()
+    cur = con.cursor()
+    cur.execute("SELECT inviter, referral_rewarded FROM users WHERE user_id=?", (user_id,))
+    row = cur.fetchone()
+    if row and not row[1]:
+        inviter = row[0]
+        if inviter and inviter != user_id:
+            cur.execute("UPDATE users SET balance=balance+100, referrals=referrals+1 WHERE user_id=?", (inviter,))
+        cur.execute("UPDATE users SET referral_rewarded=1 WHERE user_id=?", (user_id,))
+    con.commit()
+    con.close()
+
+
+class AccessGate(BaseMiddleware):
+    async def __call__(self, handler, event, data):
+        if not isinstance(event, Message) or not event.from_user:
+            return await handler(event, data)
+        if event.text and event.text.split()[0].startswith("/start"):
+            return await handler(event, data)
+        con = db()
+        cur = con.cursor()
+        cur.execute("SELECT language FROM users WHERE user_id=?", (event.from_user.id,))
+        row = cur.fetchone()
+        con.close()
+        if not row or not row[0]:
+            await send_language_prompt(event)
+            return
+        subscribed = await is_subscribed(event.from_user.id)
+        if subscribed is not True:
+            if subscribed is None:
+                await event.answer("⚠️ Botni @Cr7_Siu_Pubg kanaliga administrator qilib qo‘shing.")
+            else:
+                await send_subscription_prompt(event)
+            return
+        return await handler(event, data)
+
+
+dp.message.middleware(AccessGate())
 
 
 def db():
@@ -62,9 +141,17 @@ def init_db():
             balance INTEGER DEFAULT 0,
             referrals INTEGER DEFAULT 0,
             points INTEGER DEFAULT 0,
-            inviter INTEGER DEFAULT 0
+            inviter INTEGER DEFAULT 0,
+            language TEXT DEFAULT '',
+            referral_rewarded INTEGER DEFAULT 1
         )
     """)
+    cur.execute("PRAGMA table_info(users)")
+    columns = {row[1] for row in cur.fetchall()}
+    if "language" not in columns:
+        cur.execute("ALTER TABLE users ADD COLUMN language TEXT DEFAULT ''")
+    if "referral_rewarded" not in columns:
+        cur.execute("ALTER TABLE users ADD COLUMN referral_rewarded INTEGER DEFAULT 1")
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS promo_codes (
@@ -183,55 +270,90 @@ async def start(message: Message):
     username = message.from_user.username or ""
     parts = message.text.split()
     inviter = 0
-
     if len(parts) > 1 and parts[1].startswith("ref_"):
         try:
             inviter = int(parts[1][4:])
         except ValueError:
             inviter = 0
-
     con = db()
     cur = con.cursor()
-
-    cur.execute("SELECT user_id FROM users WHERE user_id=?", (user_id,))
-    exists = cur.fetchone()
-
-    if not exists:
+    cur.execute("SELECT user_id, language FROM users WHERE user_id=?", (user_id,))
+    existing = cur.fetchone()
+    if not existing:
         if inviter == user_id:
             inviter = 0
-
+        cur.execute("SELECT 1 FROM users WHERE user_id=?", (inviter,))
+        if not cur.fetchone():
+            inviter = 0
         cur.execute(
             """INSERT INTO users
-            (user_id, username, balance, referrals, points, inviter)
-            VALUES (?, ?, 0, 0, 0, ?)""",
+            (user_id, username, balance, referrals, points, inviter, language, referral_rewarded)
+            VALUES (?, ?, 0, 0, 0, ?, '', 0)""",
             (user_id, username, inviter)
         )
-
-        if inviter:
-            cur.execute(
-                "UPDATE users SET balance=balance+100, referrals=referrals+1 WHERE user_id=?",
-                (inviter,)
-            )
-
+        language = ""
+    else:
+        language = existing[1] or ""
+        cur.execute("UPDATE users SET username=? WHERE user_id=?", (username, user_id))
     con.commit()
     con.close()
-
-    await message.answer(
-        "🤖 <b>iDonat Robotga xush kelibsiz!</b>\n\n"
-        "Kerakli bo‘limni tanlang.",
-        reply_markup=main_keyboard()
-    )
-
+    if not language:
+        await send_language_prompt(message)
+        return
+    subscribed = await is_subscribed(user_id)
+    if subscribed is not True:
+        if subscribed is None:
+            await message.answer("⚠️ Botni @Cr7_Siu_Pubg kanaliga administrator qilib qo‘shing.")
+        else:
+            await send_subscription_prompt(message)
+        return
+    await finish_referral(user_id)
+    await message.answer("🤖 <b>iDonat Robotga xush kelibsiz!</b>\n\nKerakli bo‘limni tanlang.", reply_markup=main_keyboard())
     if WEBAPP_URL.startswith("https://"):
-        await message.answer(
-            "🚀 <b>Mini ilovani shu tugma orqali oching:</b>",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(
-                    text="🚀 Mini ilovani ochish",
-                    web_app=WebAppInfo(url=WEBAPP_URL)
-                )]
-            ])
-        )
+        await message.answer("🚀 <b>Mini ilovani shu tugma orqali oching:</b>", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="🚀 Mini ilovani ochish", web_app=WebAppInfo(url=WEBAPP_URL))
+        ]]))
+
+
+@dp.callback_query(F.data.startswith("lang:"))
+async def choose_language(callback: CallbackQuery):
+    language = callback.data.split(":", 1)[1]
+    if language not in ("uz", "ru", "en"):
+        await callback.answer("Noto‘g‘ri til.", show_alert=True)
+        return
+    con = db()
+    cur = con.cursor()
+    cur.execute("INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)",
+                (callback.from_user.id, callback.from_user.username or ""))
+    cur.execute("UPDATE users SET language=? WHERE user_id=?", (language, callback.from_user.id))
+    con.commit()
+    con.close()
+    await callback.answer("Til saqlandi!" if language == "uz" else ("Язык сохранён!" if language == "ru" else "Language saved!"))
+    subscribed = await is_subscribed(callback.from_user.id)
+    if subscribed is True:
+        await finish_referral(callback.from_user.id)
+        await callback.message.answer("🤖 <b>iDonat Robotga xush kelibsiz!</b>\nKerakli bo‘limni tanlang.", reply_markup=main_keyboard())
+    elif subscribed is False:
+        await send_subscription_prompt(callback.message)
+    else:
+        await callback.message.answer("⚠️ Botni @Cr7_Siu_Pubg kanaliga administrator qilib qo‘shing.")
+
+
+@dp.callback_query(F.data == "check_subscription")
+async def check_subscription(callback: CallbackQuery):
+    subscribed = await is_subscribed(callback.from_user.id)
+    if subscribed is True:
+        await finish_referral(callback.from_user.id)
+        await callback.answer("✅ Obuna tasdiqlandi!")
+        await callback.message.answer("🤖 <b>iDonat Robotga xush kelibsiz!</b>\nKerakli bo‘limni tanlang.", reply_markup=main_keyboard())
+        if WEBAPP_URL.startswith("https://"):
+            await callback.message.answer("🚀 <b>Mini ilovani ochish:</b>", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(text="🚀 Mini ilovani ochish", web_app=WebAppInfo(url=WEBAPP_URL))
+            ]]))
+    elif subscribed is False:
+        await callback.answer("❌ Hali kanalga obuna bo‘lmagansiz.", show_alert=True)
+    else:
+        await callback.answer("⚠️ Bot kanal administratori emas.", show_alert=True)
 
 
 @dp.message(Command("app"))
@@ -1167,6 +1289,24 @@ async def api_checkers_move(request):
         con.close()
 
 
+@web.middleware
+async def require_channel_subscription(request, handler):
+    if request.path.startswith("/api/"):
+        try:
+            payload = await request.json()
+        except Exception:
+            return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+        telegram_user = validate_webapp_init_data(payload.get("initData", ""))
+        if not telegram_user:
+            return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
+        subscribed = await is_subscribed(int(telegram_user["id"]))
+        if subscribed is None:
+            return web.json_response({"error": "Botni @Cr7_Siu_Pubg kanaliga administrator qilib qo‘shing"}, status=503)
+        if not subscribed:
+            return web.json_response({"error": "Kanalga obuna bo‘ling: @Cr7_Siu_Pubg"}, status=403)
+    return await handler(request)
+
+
 async def mini_app_home(request):
     page = Path(__file__).parent / "webapp" / "index.html"
     if not page.exists():
@@ -1175,7 +1315,7 @@ async def mini_app_home(request):
 
 
 async def start_web_server():
-    app = web.Application()
+    app = web.Application(middlewares=[require_channel_subscription])
     app.router.add_get("/", mini_app_home)
     app.router.add_post("/api/me", api_me)
     app.router.add_post("/api/daily-claim", api_daily_claim)
