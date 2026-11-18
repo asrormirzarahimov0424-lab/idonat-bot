@@ -257,9 +257,9 @@ def tr(user_id,key):
 async def set_chat_commands(chat_id, language):
     from aiogram.types import BotCommand, BotCommandScopeChat
     commands={
-      "uz":[("start","Botni ishga tushirish"),("app","Mini ilovani ochish"),("balance","Balansni ko‘rish"),("referral","Referal havolasi"),("top","TOP 10"),("language","Tilni almashtirish"),("help","Yordam")],
-      "ru":[("start","Запустить бота"),("app","Открыть Mini App"),("balance","Мой баланс"),("referral","Реферальная ссылка"),("top","ТОП 10"),("language","Сменить язык"),("help","Помощь")],
-      "en":[("start","Start the bot"),("app","Open Mini App"),("balance","View balance"),("referral","Referral link"),("top","TOP 10"),("language","Change language"),("help","Help")]
+      "uz":[("start","Botni ishga tushirish"),("app","Mini ilovani ochish"),("balance","Balansni ko‘rish"),("referral","Referal havolasi"),("top","TOP 10"),("language","Tilni almashtirish"),("cancel","Amalni bekor qilish"),("help","Yordam")],
+      "ru":[("start","Запустить бота"),("app","Открыть Mini App"),("balance","Мой баланс"),("referral","Реферальная ссылка"),("top","ТОП 10"),("language","Сменить язык"),("cancel","Отменить действие"),("help","Помощь")],
+      "en":[("start","Start the bot"),("app","Open Mini App"),("balance","View balance"),("referral","Referral link"),("top","TOP 10"),("language","Change language"),("cancel","Cancel current action"),("help","Help")]
     }
     try:
         await bot.set_my_commands(
