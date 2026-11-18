@@ -24,7 +24,7 @@
 <section id="xo" class="page"><button class="back" onclick="openPage('games')">← O‘yinlar</button><h2>❌⭕ X-O</h2><div class="panel"><div class="muted" id="xostatus">Siz X, kompyuter O</div><div class="board" id="xoboard"></div><button class="primary" onclick="resetXO()">Qayta boshlash</button></div></section>
 <section id="balance" class="page"><button class="back" onclick="goHome()">← Orqaga</button><h2>💳 Balans</h2><div class="panel"><div class="muted">Joriy balans</div><div class="amount" id="balance2">0 so‘m</div><p class="muted">To‘lov usulini tanlang. Real to‘lov provayderi ulanmaguncha pul yechilmaydi.</p><button class="primary" onclick="toast('To‘lov provayderi hali ulanmagan')">Balansni to‘ldirish</button></div></section>
 <section id="ref" class="page"><button class="back" onclick="goHome()">← Orqaga</button><h2>🤝 Referal</h2><div class="panel"><div class="muted">Sizning taklif havolangiz</div><input class="input" id="reflink" readonly value="Telegram orqali ochilganda yaratiladi"><button class="primary" onclick="copyRef()">Havolani nusxalash</button><p class="muted">Takliflar va mukofotlar serverdagi hisob bilan sinxronlanadi.</p></div></section>
-<section id="top" class="page"><button class="back" onclick="goHome()">← Orqaga</button><h2>🏆 TOP 10</h2><div class="panel"><div class="row"><b>Referal reytingi</b><span class="tag">Umumiy</span></div><p class="muted">Reyting server ma’lumotlari ulangach ko‘rsatiladi.</p></div></section>
+<section id="top" class="page"><button class="back" onclick="goHome()">← Orqaga</button><h2>🏆 TOP 10</h2><div class="panel"><div class="row"><b>Referal reytingi</b><span class="tag">Umumiy</span></div><div id="toplist" class="list"><p class="muted">Yuklanmoqda...</p></div></div></section>
 <section id="bonus" class="page"><button class="back" onclick="goHome()">← Orqaga</button><h2>🎁 Kunlik bonus</h2><div class="gift"><div class="big">🎁</div><h3>Bugungi bonus</h3><div class="amount">+100 ochko</div><button class="primary" onclick="toast('Bonus serverga ulangandan keyin beriladi')">Bonusni olish</button></div></section>
 <section id="ai" class="page"><button class="back" onclick="goHome()">← Orqaga</button><h2>🤖 iDonat AI</h2><div class="panel"><p>Salom! Men iDonat AI. Savolingizni yozing.</p><input id="aiq" class="input" placeholder="Savolingiz..."><button class="primary" onclick="toast('AI xizmati hali ulanmagan')">Yuborish</button></div></section>
 <section id="orders" class="page"><button class="back" onclick="goHome()">← Orqaga</button><h2>📦 Buyurtmalarim</h2><div class="panel muted">Hozircha buyurtmalar yo‘q. Buyurtma API ulangach bu yerda ko‘rinadi.</div></section>
@@ -35,11 +35,33 @@
 </main>
 <nav class="nav"><div class="navin"><button class="sel" onclick="goHome()">🏠<br>Bosh sahifa</button><button onclick="openPage('orders')">📦<br>Buyurtmalar</button><button onclick="openPage('profile')">👤<br>Profil</button></div></nav>
 <script>
-const tg=window.Telegram?.WebApp; if(tg){tg.ready();tg.expand();const u=tg.initDataUnsafe?.user;if(u){document.getElementById('hello').textContent=u.first_name||'do‘stim';document.getElementById('username').textContent='@'+(u.username||'telegram');document.getElementById('profileName').textContent=(u.first_name||'')+' '+(u.last_name||'');}}
+const tg=window.Telegram?.WebApp; if(tg){tg.ready();tg.expand();const u=tg.initDataUnsafe?.user;if(u){document.getElementById('hello').textContent=u.first_name||'do‘stim';document.getElementById('username').textContent='@'+(u.username||'telegram');document.getElementById('profileName').textContent=((u.first_name||'')+' '+(u.last_name||'')).trim()||'Telegram foydalanuvchisi';}loadAccount();}
 function openPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(id)?.classList.add('active');window.scrollTo(0,0)}
 function goHome(){openPage('home')}
 function toast(t){if(tg?.showAlert)tg.showAlert(t);else alert(t)}
-function copyRef(){const x=document.getElementById('reflink');x.select();document.execCommand('copy');toast('Havola nusxalandi')}
+function copyRef(){const x=document.getElementById('reflink');if(!x.value||x.value.startsWith('Telegram')){toast('Avval Telegram orqali oching');return;}x.select();document.execCommand('copy');toast('Havola nusxalandi')}
+async function loadAccount(){
+ if(!tg?.initData){return;}
+ try{
+  const response=await fetch('/api/me',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData})});
+  const data=await response.json();
+  if(!response.ok)throw new Error(data.error||'Ma’lumot yuklanmadi');
+  const money=Number(data.balance||0).toLocaleString('uz-UZ')+' so‘m';
+  document.getElementById('balance').textContent=money;
+  document.getElementById('balance2').textContent=money;
+  document.getElementById('reflink').value=data.referral_link||'';
+  document.getElementById('profileName').textContent=((data.first_name||'')+' '+(data.last_name||'')).trim()||'Telegram foydalanuvchisi';
+  const top=document.getElementById('toplist');
+  top.innerHTML='';
+  if(!data.top10||!data.top10.length){top.innerHTML='<p class="muted">Hozircha natijalar yo‘q.</p>';}
+  else data.top10.forEach((person,index)=>{
+   const item=document.createElement('div');item.className='item';
+   const name=person.username?'@'+person.username:'Foydalanuvchi';
+   item.textContent=(index+1)+'. '+name+' — '+person.referrals+' ta';
+   top.appendChild(item);
+  });
+ }catch(error){toast(error.message||'Server bilan aloqa yo‘q');}
+}
 let xo=Array(9).fill(''),xodone=false;
 function drawXO(){const b=document.getElementById('xoboard');b.innerHTML='';xo.forEach((v,i)=>{let q=document.createElement('button');q.className='cell';q.textContent=v;q.onclick=()=>moveXO(i);b.appendChild(q)})}
 function winner(a){for(let [x,y,z] of [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]])if(a[x]&&a[x]===a[y]&&a[y]===a[z])return a[x];return ''}
