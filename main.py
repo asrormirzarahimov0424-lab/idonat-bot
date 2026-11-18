@@ -1,264 +1,415 @@
+
 import os
-import asyncio
 import sqlite3
+import asyncio
+
 from aiogram import Bot, Dispatcher, F
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, Command
+from aiogram.types import (
+    Message,
+    ReplyKeyboardMarkup,
+    KeyboardButton
+)
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 from dotenv import load_dotenv
 
 load_dotenv()
+
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
+DB_NAME = "idonat_robot.db"
 
 if not BOT_TOKEN:
-    raise RuntimeError("BOT_TOKEN topilmadi.")
+    raise RuntimeError("BOT_TOKEN topilmadi!")
 
-bot = Bot(token=BOT_TOKEN)
+bot = Bot(
+    token=BOT_TOKEN,
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+)
 dp = Dispatcher()
 
-DB_PATH = "idonat_robot.db"
+promo_waiting = set()
+
+
+def db():
+    return sqlite3.connect(DB_NAME)
+
 
 def init_db():
-    with sqlite3.connect(DB_PATH) as db:
-        db.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                user_id INTEGER PRIMARY KEY,
-                balance INTEGER DEFAULT 0,
-                referrals INTEGER DEFAULT 0,
-                referred_by INTEGER
-            )
-        """)
-        db.execute("""
-            CREATE TABLE IF NOT EXISTS promo_codes (
-                code TEXT PRIMARY KEY,
-                amount INTEGER,
-                max_uses INTEGER,
-                uses INTEGER DEFAULT 0
-            )
-        """)
-        db.execute("""
-            CREATE TABLE IF NOT EXISTS promo_redemptions (
-                user_id INTEGER,
-                code TEXT,
-                PRIMARY KEY(user_id, code)
-            )
-        """)
+    con = db()
+    cur = con.cursor()
 
-init_db()
-keyboard = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="🛍 Xizmatlar"), KeyboardButton(text="🎮 PUBG UC")],
-        [KeyboardButton(text="📞 Virtual raqamlar"), KeyboardButton(text="💳 Balans")],
-        [KeyboardButton(text="📦 Buyurtmalarim"), KeyboardButton(text="👨‍💻 Yordam")],
-    ],
-    resize_keyboard=True
-)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY,
+            username TEXT,
+            balance INTEGER DEFAULT 0,
+            referrals INTEGER DEFAULT 0,
+            points INTEGER DEFAULT 0,
+            inviter INTEGER DEFAULT 0
+        )
+    """)
 
-balance_keyboard = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="💰 Mening balansim")],
-        [KeyboardButton(text="🤝 Referal"), KeyboardButton(text="🎟 Promokod")],
-        [KeyboardButton(text="🏆 TOP 10")],
-        [KeyboardButton(text="⬅️ Orqaga")]
-    ],
-    resize_keyboard=True
-)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS promo_codes (
+            code TEXT PRIMARY KEY,
+            amount INTEGER,
+            limit_count INTEGER,
+            used_count INTEGER DEFAULT 0
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS promo_redemptions (
+            user_id INTEGER,
+            code TEXT,
+            UNIQUE(user_id, code)
+        )
+    """)
+
+    con.commit()
+    con.close()
+
 
 def get_user(user_id):
-    with sqlite3.connect(DB_PATH) as db:
-        return db.execute(
-            "SELECT balance, referrals FROM users WHERE user_id=?",
-            (user_id,)
-        ).fetchone()
+    con = db()
+    cur = con.cursor()
+    cur.execute(
+        "SELECT balance, referrals, points FROM users WHERE user_id=?",
+        (user_id,)
+    )
+    result = cur.fetchone()
+    con.close()
+    return result
+
+
+def main_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="🛍 Xizmatlar")],
+            [KeyboardButton(text="🎮 PUBG UC"),
+             KeyboardButton(text="📞 Virtual raqamlar")],
+            [KeyboardButton(text="💳 Balans"),
+             KeyboardButton(text="📦 Buyurtmalarim")],
+            [KeyboardButton(text="👨‍💻 Yordam")]
+        ],
+        resize_keyboard=True
+    )
+
+
+def balance_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="💰 Mening balansim")],
+            [KeyboardButton(text="🤝 Referal"),
+             KeyboardButton(text="🎟 Promokod")],
+            [KeyboardButton(text="🏆 TOP 10")],
+            [KeyboardButton(text="⬅️ Orqaga")]
+        ],
+        resize_keyboard=True
+    )
+
 
 @dp.message(CommandStart())
 async def start(message: Message):
     user_id = message.from_user.id
-    args = message.text.split(maxsplit=1)
-    with sqlite3.connect(DB_PATH) as db:
-        exists = db.execute(
-            "SELECT user_id FROM users WHERE user_id=?", (user_id,)
-        ).fetchone()
+    username = message.from_user.username or ""
+    parts = message.text.split()
+    inviter = 0
 
-        if not exists:
-            db.execute("INSERT INTO users(user_id) VALUES(?)", (user_id,))
-            if len(args) > 1 and args[1].startswith("ref_"):
-                try:
-                    inviter = int(args[1][4:])
-                    if inviter != user_id:
-                        inviter_exists = db.execute(
-                            "SELECT user_id FROM users WHERE user_id=?",
-                            (inviter,)
-                        ).fetchone()
-                        if inviter_exists:
-                            db.execute(
-                                "UPDATE users SET balance=balance+100, referrals=referrals+1 WHERE user_id=?",
-                                (inviter,)
-                            )
-                except ValueError:
-                    pass
+    if len(parts) > 1 and parts[1].startswith("ref_"):
+        try:
+            inviter = int(parts[1][4:])
+        except ValueError:
+            inviter = 0
+
+    con = db()
+    cur = con.cursor()
+
+    cur.execute("SELECT user_id FROM users WHERE user_id=?", (user_id,))
+    exists = cur.fetchone()
+
+    if not exists:
+        if inviter == user_id:
+            inviter = 0
+
+        cur.execute(
+            """INSERT INTO users
+            (user_id, username, balance, referrals, points, inviter)
+            VALUES (?, ?, 0, 0, 0, ?)""",
+            (user_id, username, inviter)
+        )
+
+        if inviter:
+            cur.execute(
+                "UPDATE users SET balance=balance+100, referrals=referrals+1 WHERE user_id=?",
+                (inviter,)
+            )
+
+    con.commit()
+    con.close()
 
     await message.answer(
-        "🤖 iDonat Robotga xush kelibsiz!\n\nKerakli bo‘limni tanlang.",
-        reply_markup=keyboard
-    )
-    @dp.message(F.text == "🛍 Xizmatlar")
-async def services(message: Message):
-    await message.answer(
-        "🛍 Xizmatlar bo‘limi\n\n"
-        "Bu demo versiya. Xizmatlar provayder ulangandan keyin yoqiladi."
+        "🤖 <b>iDonat Robotga xush kelibsiz!</b>\n\n"
+        "Kerakli bo‘limni tanlang.",
+        reply_markup=main_keyboard()
     )
 
-@dp.message(F.text == "🎮 PUBG UC")
-async def pubg(message: Message):
-    await message.answer(
-        "🎮 PUBG Mobile UC\n\n"
-        "UC yetkazib berish uchun rasmiy provayder API ulanishi kerak."
-    )
-
-@dp.message(F.text == "📞 Virtual raqamlar")
-async def numbers(message: Message):
-    await message.answer(
-        "📞 Virtual raqamlar\n\n"
-        "Faqat qonuniy aloqa xizmatlari qo‘shiladi."
-    )
 
 @dp.message(F.text == "💳 Balans")
-async def balance(message: Message):
-    user = get_user(message.from_user.id)
-    amount = user[0] if user else 0
+async def balance_menu(message: Message):
     await message.answer(
-        f"💳 Balansingiz: {amount} so‘m\n\nBo‘limni tanlang.",
-        reply_markup=balance_keyboard
+        "💳 <b>Balans bo‘limi</b>\n\nKerakli bo‘limni tanlang:",
+        reply_markup=balance_keyboard()
     )
+
 
 @dp.message(F.text == "💰 Mening balansim")
 async def my_balance(message: Message):
     user = get_user(message.from_user.id)
-    amount = user[0] if user else 0
-    await message.answer(f"💰 Sizning balansingiz: {amount} so‘m")
-    @dp.message(F.text == "🤝 Referal")
+
+    if user:
+        await message.answer(
+            f"💰 Balansingiz: <b>{user[0]:,} so‘m</b>\n"
+            f"🤝 Taklif qilganlaringiz: <b>{user[1]}</b>\n"
+            f"⭐ O‘yin ochkolari: <b>{user[2]}</b>"
+        )
+
+
+@dp.message(F.text == "🤝 Referal")
 async def referral(message: Message):
     user_id = message.from_user.id
     user = get_user(user_id)
-    referrals = user[1] if user else 0
-    link = f"https://t.me/iDonat_Robot?start=ref_{user_id}"
 
-    await message.answer(
-        f"🤝 Referal tizimi\n\n"
-        f"🎁 Har bir yangi taklif qilingan foydalanuvchi uchun 100 so‘m.\n"
-        f"👥 Takliflaringiz: {referrals} ta\n\n"
-        f"🔗 Sizning havolangiz:\n{link}"
-    )
-
-@dp.message(F.text == "🏆 TOP 10")
-async def top10(message: Message):
-    with sqlite3.connect(DB_PATH) as db:
-        rows = db.execute(
-            "SELECT user_id, referrals FROM users "
-            "WHERE referrals > 0 ORDER BY referrals DESC LIMIT 10"
-        ).fetchall()
-
-    if not rows:
-        await message.answer("🏆 Hozircha reytingda foydalanuvchilar yo‘q.")
+    if not user:
         return
 
-    result = "🏆 TOP 10 REFERAL\n\n"
-    for i, row in enumerate(rows, 1):
-        result += f"{i}. ID: {row[0]} — {row[1]} ta\n"
+    me = await bot.get_me()
+    link = f"https://t.me/{me.username}?start=ref_{user_id}"
 
-    await message.answer(result)
-    @dp.message(F.text == "🎟 Promokod")
+    await message.answer(
+        "🤝 <b>Referal tizimi</b>\n\n"
+        "Do‘stlaringizni taklif qiling!\n"
+        "Har bir yangi foydalanuvchi uchun 100 so‘m "
+        "virtual balans beriladi.\n\n"
+        f"👥 Taklif qilganlaringiz: <b>{user[1]}</b>\n"
+        f"💰 Referal havolangiz:\n<code>{link}</code>"
+    )
+
+
+@dp.message(F.text == "🎟 Promokod")
 async def promo_start(message: Message):
-    await message.answer("🎟 Promokodingizni yuboring:")
+    promo_waiting.add(message.from_user.id)
+    await message.answer(
+        "🎟 Promokodingizni yuboring.\n"
+        "Bekor qilish uchun /cancel yozing."
+    )
 
-@dp.message(F.text == "⬅️ Orqaga")
-async def back(message: Message):
-    await message.answer("Asosiy menyu:", reply_markup=keyboard)
 
-@dp.message(F.text == "📦 Buyurtmalarim")
-async def orders(message: Message):
-    await message.answer("📦 Hozircha buyurtmalaringiz yo‘q.")
+@dp.message(Command("cancel"))
+async def cancel(message: Message):
+    promo_waiting.discard(message.from_user.id)
+    await message.answer("Bekor qilindi.", reply_markup=balance_keyboard())
 
-@dp.message(F.text == "👨‍💻 Yordam")
-async def help_message(message: Message):
-    await message.answer("👨‍💻 Yordam uchun bot administratori bilan bog‘laning.")
-    @dp.message(F.text.startswith("/addpromo"))
+
+async def redeem_promo(message: Message):
+    user_id = message.from_user.id
+    code = message.text.strip().upper()
+
+    con = db()
+    cur = con.cursor()
+
+    try:
+        cur.execute("BEGIN IMMEDIATE")
+
+        cur.execute(
+            "SELECT amount, limit_count, used_count FROM promo_codes WHERE code=?",
+            (code,)
+        )
+        promo = cur.fetchone()
+
+        if not promo:
+            con.rollback()
+            await message.answer("❌ Bunday promokod topilmadi.")
+            return
+
+        amount, limit_count, used_count = promo
+
+        if used_count >= limit_count:
+            con.rollback()
+            await message.answer("❌ Bu promokodning limiti tugagan.")
+            return
+
+        cur.execute(
+            "SELECT 1 FROM promo_redemptions WHERE user_id=? AND code=?",
+            (user_id, code)
+        )
+
+        if cur.fetchone():
+            con.rollback()
+            await message.answer("❌ Siz bu promokoddan foydalangansiz.")
+            return
+
+        cur.execute(
+            "UPDATE users SET balance=balance+? WHERE user_id=?",
+            (amount, user_id)
+        )
+
+        cur.execute(
+            "UPDATE promo_codes SET used_count=used_count+1 WHERE code=?",
+            (code,)
+        )
+
+        cur.execute(
+            "INSERT INTO promo_redemptions (user_id, code) VALUES (?, ?)",
+            (user_id, code)
+        )
+
+        con.commit()
+        await message.answer(
+            f"✅ Promokod qabul qilindi!\n"
+            f"💰 Balansingizga {amount:,} so‘m qo‘shildi."
+        )
+
+    except sqlite3.Error:
+        con.rollback()
+        await message.answer("❌ Xatolik yuz berdi. Keyinroq urinib ko‘ring.")
+
+    finally:
+        con.close()
+
+
+@dp.message(Command("addpromo"))
 async def add_promo(message: Message):
-    if ADMIN_ID == 0 or message.from_user.id != ADMIN_ID:
-        await message.answer("⛔ Ruxsat yo‘q.")
+    if message.from_user.id != ADMIN_ID or ADMIN_ID == 0:
         return
 
     parts = message.text.split()
+
     if len(parts) != 4:
-        await message.answer("Format: /addpromo KOD MIQDOR LIMIT")
+        await message.answer(
+            "Format:\n/addpromo KOD MIQDOR LIMIT\n"
+            "Masalan: /addpromo TEST100 1000 50"
+        )
         return
 
     try:
         code = parts[1].upper()
         amount = int(parts[2])
-        limit = int(parts[3])
+        limit_count = int(parts[3])
 
-        if amount <= 0 or limit <= 0:
+        if amount <= 0 or limit_count <= 0:
             raise ValueError
 
-        with sqlite3.connect(DB_PATH) as db:
-            db.execute(
-                "INSERT INTO promo_codes(code, amount, max_uses) VALUES(?,?,?)",
-                (code, amount, limit)
-            )
-        await message.answer("✅ Promokod yaratildi!")
-    except sqlite3.IntegrityError:
-        await message.answer("Bu promokod avval yaratilgan.")
-    except ValueError:
-        await message.answer("Miqdor va limit musbat son bo‘lishi kerak.")
+        con = db()
+        cur = con.cursor()
+        cur.execute(
+            "INSERT INTO promo_codes (code, amount, limit_count) VALUES (?, ?, ?)",
+            (code, amount, limit_count)
+        )
+        con.commit()
+        con.close()
 
-@dp.message()
-async def use_promo(message: Message):
-    code = message.text.strip().upper()
+        await message.answer("✅ Promokod yaratildi!")
+
+    except ValueError:
+        await message.answer("❌ Miqdor va limit musbat son bo‘lishi kerak.")
+    except sqlite3.IntegrityError:
+        await message.answer("❌ Bu promokod avval yaratilgan.")
+
+
+@dp.message(F.text == "🏆 TOP 10")
+async def top10(message: Message):
+    con = db()
+    cur = con.cursor()
+    cur.execute("""
+        SELECT username, referrals
+        FROM users
+        ORDER BY referrals DESC, user_id ASC
+        LIMIT 10
+    """)
+    rows = cur.fetchall()
+    con.close()
+
+    text = "🏆 <b>REFERAL TOP 10</b>\n\n"
+
+    if not rows:
+        text += "Hozircha natijalar yo‘q."
+    else:
+        for i, row in enumerate(rows, 1):
+            name = ("@" + row[0]) if row[0] else "Foydalanuvchi"
+            text += f"{i}. {name} — {row[1]} ta\n"
+
+    text += "\n⭐ O‘yin TOP 10 alohida tizimda yuritiladi."
+    await message.answer(text)
+
+
+@dp.message(F.text == "🛍 Xizmatlar")
+async def services(message: Message):
+    await message.answer(
+        "🛍 <b>Xizmatlar</b>\n\n"
+        "Bu bo‘lim provayder ulangandan keyin faollashadi."
+    )
+
+
+@dp.message(F.text == "🎮 PUBG UC")
+async def pubg(message: Message):
+    await message.answer(
+        "🎮 <b>PUBG UC</b>\n\n"
+        "UC buyurtmalari rasmiy provayder ulangandan keyin faollashadi."
+    )
+
+
+@dp.message(F.text == "📞 Virtual raqamlar")
+async def numbers(message: Message):
+    await message.answer(
+        "📞 <b>Virtual raqamlar</b>\n\n"
+        "Bu xizmat provayder ulangandan keyin faollashadi."
+    )
+
+
+@dp.message(F.text == "📦 Buyurtmalarim")
+async def orders(message: Message):
+    await message.answer("📦 Hozircha buyurtmalaringiz yo‘q.")
+
+
+@dp.message(F.text == "👨‍💻 Yordam")
+async def help_user(message: Message):
+    await message.answer(
+        "👨‍💻 <b>Yordam</b>\n\n"
+        "Savollaringiz bo‘lsa, administratorga murojaat qiling."
+    )
+
+
+@dp.message(F.text == "⬅️ Orqaga")
+async def back(message: Message):
+    await message.answer(
+        "Asosiy menyu:",
+        reply_markup=main_keyboard()
+    )
+
+
+@dp.message(F.text)
+async def other_messages(message: Message):
     user_id = message.from_user.id
 
-    with sqlite3.connect(DB_PATH) as db:
-        promo = db.execute(
-            "SELECT amount, max_uses, uses FROM promo_codes WHERE code=?",
-            (code,)
-        ).fetchone()
+    if user_id in promo_waiting:
+        promo_waiting.discard(user_id)
+        await redeem_promo(message)
+        return
 
-        if not promo:
-            return
+    await message.answer(
+        "Kerakli bo‘limni menyudan tanlang.",
+        reply_markup=main_keyboard()
+    )
 
-        amount, max_uses, uses = promo
-
-        if uses >= max_uses:
-            await message.answer("⛔ Bu promokod tugagan.")
-            return
-
-        used = db.execute(
-            "SELECT 1 FROM promo_redemptions WHERE user_id=? AND code=?",
-            (user_id, code)
-        ).fetchone()
-
-        if used:
-            await message.answer("Siz bu promokoddan foydalangansiz.")
-            return
-
-        db.execute(
-            "INSERT INTO promo_redemptions(user_id, code) VALUES(?,?)",
-            (user_id, code)
-        )
-        db.execute(
-            "UPDATE users SET balance=balance+? WHERE user_id=?",
-            (amount, user_id)
-        )
-        db.execute(
-            "UPDATE promo_codes SET uses=uses+1 WHERE code=?", (code,)
-        )
-
-    await message.answer(f"✅ Promokod qabul qilindi! +{amount} so‘m")
 
 async def main():
+    init_db()
+    print("iDonat Robot ishga tushdi!")
     await dp.start_polling(bot)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
- 
