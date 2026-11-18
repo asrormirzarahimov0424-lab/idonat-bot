@@ -118,7 +118,7 @@ class AccessGate(BaseMiddleware):
         subscribed = await is_subscribed(event.from_user.id)
         if subscribed is not True:
             if subscribed is None:
-                await event.answer("⚠️ Botni @Cr7_Siu_Pubg kanaliga administrator qilib qo‘shing.")
+                await event.answer(tr(event.from_user.id, "sub_admin"))
             else:
                 await send_subscription_prompt(event, event.from_user.id)
             return
@@ -261,7 +261,13 @@ async def set_chat_commands(chat_id, language):
       "ru":[("start","Запустить бота"),("app","Открыть Mini App"),("balance","Мой баланс"),("referral","Реферальная ссылка"),("top","ТОП 10"),("language","Сменить язык"),("help","Помощь")],
       "en":[("start","Start the bot"),("app","Open Mini App"),("balance","View balance"),("referral","Referral link"),("top","TOP 10"),("language","Change language"),("help","Help")]
     }
-    await bot.set_my_commands([BotCommand(command=c,description=d) for c,d in commands[language]],scope=BotCommandScopeChat(chat_id=chat_id))
+    try:
+        await bot.set_my_commands(
+            [BotCommand(command=c, description=d) for c, d in commands[language]],
+            scope=BotCommandScopeChat(chat_id=chat_id)
+        )
+    except Exception as exc:
+        print(f"Buyruqlar menyusini sozlash xatosi: {exc}")
 
 def main_keyboard(user_id=None):
     t=BOT_TEXT[user_language(user_id) if user_id else "uz"]
@@ -370,7 +376,7 @@ async def check_subscription(callback: CallbackQuery):
     elif subscribed is False:
         await callback.answer(tr(callback.from_user.id, "sub_no"), show_alert=True)
     else:
-        await callback.answer("⚠️ Bot kanal administratori emas.", show_alert=True)
+        await callback.answer(tr(callback.from_user.id, "sub_admin"), show_alert=True)
 
 
 @dp.message(Command("app"))
