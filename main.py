@@ -2,6 +2,11 @@
 import os
 import sqlite3
 import asyncio
+import hmac
+import hashlib
+import json
+import time
+from urllib.parse import parse_qsl
 from pathlib import Path
 from aiohttp import web
 
@@ -410,6 +415,104 @@ async def other_messages(message: Message):
     )
 
 
+
+def validate_webapp_init_data(init_data):
+    if not init_data or not BOT_TOKEN:
+        return None
+
+    try:
+        fields = dict(parse_qsl(init_data, keep_blank_values=True))
+        received_hash = fields.pop("hash", "")
+        if not received_hash:
+            return None
+
+        check_string = "\n".join(
+            f"{key}={value}" for key, value in sorted(fields.items())
+        )
+        secret_key = hmac.new(
+            b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256
+        ).digest()
+        calculated_hash = hmac.new(
+            secret_key, check_string.encode(), hashlib.sha256
+        ).hexdigest()
+
+        if not hmac.compare_digest(calculated_hash, received_hash):
+            return None
+
+        auth_date = int(fields.get("auth_date", "0"))
+        if auth_date <= 0 or time.time() - auth_date > 86400:
+            return None
+
+        user = json.loads(fields.get("user", "{}"))
+        if not user.get("id"):
+            return None
+        return user
+    except (ValueError, TypeError, json.JSONDecodeError):
+        return None
+
+
+async def api_me(request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+
+    telegram_user = validate_webapp_init_data(payload.get("initData", ""))
+    if not telegram_user:
+        return web.json_response(
+            {"error": "Telegram orqali qayta oching"}, status=401
+        )
+
+    user_id = int(telegram_user["id"])
+    username = telegram_user.get("username", "") or ""
+    con = db()
+    cur = con.cursor()
+    cur.execute(
+        """INSERT OR IGNORE INTO users
+        (user_id, username, balance, referrals, points, inviter)
+        VALUES (?, ?, 0, 0, 0, 0)""",
+        (user_id, username)
+    )
+    cur.execute(
+        "UPDATE users SET username=? WHERE user_id=?",
+        (username, user_id)
+    )
+    cur.execute(
+        "SELECT balance, referrals, points FROM users WHERE user_id=?",
+        (user_id,)
+    )
+    account = cur.fetchone()
+
+    cur.execute("""
+        SELECT username, referrals
+        FROM users
+        ORDER BY referrals DESC, user_id ASC
+        LIMIT 10
+    """)
+    leaders = [
+        {"username": row[0] or "", "referrals": row[1]}
+        for row in cur.fetchall()
+    ]
+    con.commit()
+    con.close()
+
+    me = await bot.get_me()
+    referral_link = f"https://t.me/{me.username}?start=ref_{user_id}"
+
+    return web.json_response({
+        "user_id": user_id,
+        "username": username,
+        "first_name": telegram_user.get("first_name", ""),
+        "last_name": telegram_user.get("last_name", ""),
+        "balance": account[0] if account else 0,
+        "referrals": account[1] if account else 0,
+        "points": account[2] if account else 0,
+        "referral_link": referral_link,
+        "top10": leaders,
+        "orders": []
+    })
+
+
 async def mini_app_home(request):
     page = Path(__file__).parent / "webapp" / "index.html"
     if not page.exists():
@@ -420,6 +523,7 @@ async def mini_app_home(request):
 async def start_web_server():
     app = web.Application()
     app.router.add_get("/", mini_app_home)
+    app.router.add_post("/api/me", api_me)
     app.router.add_get("/health", lambda request: web.json_response({"ok": True, "app": "iDonat Robot"}))
     runner = web.AppRunner(app)
     await runner.setup()
