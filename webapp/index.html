@@ -25,7 +25,7 @@
 <section id="balance" class="page"><button class="back" onclick="goHome()">← Orqaga</button><h2>💳 Balans</h2><div class="panel"><div class="muted">Joriy balans</div><div class="amount" id="balance2">0 so‘m</div><p class="muted">To‘lov usulini tanlang. Real to‘lov provayderi ulanmaguncha pul yechilmaydi.</p><button class="primary" onclick="toast('To‘lov provayderi hali ulanmagan')">Balansni to‘ldirish</button></div></section>
 <section id="ref" class="page"><button class="back" onclick="goHome()">← Orqaga</button><h2>🤝 Referal</h2><div class="panel"><div class="muted">Sizning taklif havolangiz</div><input class="input" id="reflink" readonly value="Telegram orqali ochilganda yaratiladi"><button class="primary" onclick="copyRef()">Havolani nusxalash</button><p class="muted">Takliflar va mukofotlar serverdagi hisob bilan sinxronlanadi.</p></div></section>
 <section id="top" class="page"><button class="back" onclick="goHome()">← Orqaga</button><h2>🏆 TOP 10</h2><div class="panel"><div class="row"><b>Referal reytingi</b><span class="tag">Umumiy</span></div><div id="toplist" class="list"><p class="muted">Yuklanmoqda...</p></div></div></section>
-<section id="bonus" class="page"><button class="back" onclick="goHome()">← Orqaga</button><h2>🎁 Kunlik bonus</h2><div class="gift"><div class="big">🎁</div><h3>Bugungi bonus</h3><div class="amount">+100 ochko</div><button class="primary" onclick="toast('Bonus serverga ulangandan keyin beriladi')">Bonusni olish</button></div></section>
+<section id="bonus" class="page"><button class="back" onclick="goHome()">← Orqaga</button><h2>🎁 Kunlik bonus</h2><div class="gift"><div class="big">🎁</div><h3>Bugungi bonus</h3><div class="amount">+50 ochko</div><p class="muted" id="bonusStatus">Har kuni 50 ochko olish mumkin</p><button class="primary" id="bonusButton" onclick="claimDailyBonus()">Bonusni olish</button></div></section>
 <section id="ai" class="page"><button class="back" onclick="goHome()">← Orqaga</button><h2>🤖 iDonat AI</h2><div class="panel"><p>Salom! Men iDonat AI. Savolingizni yozing.</p><input id="aiq" class="input" placeholder="Savolingiz..."><button class="primary" onclick="toast('AI xizmati hali ulanmagan')">Yuborish</button></div></section>
 <section id="orders" class="page"><button class="back" onclick="goHome()">← Orqaga</button><h2>📦 Buyurtmalarim</h2><div class="panel muted">Hozircha buyurtmalar yo‘q. Buyurtma API ulangach bu yerda ko‘rinadi.</div></section>
 <section id="achievements" class="page"><button class="back" onclick="goHome()">← Orqaga</button><h2>⭐ Yutuqlar</h2><div class="list"><div class="item">🥇 Birinchi g‘alaba <span>+100</span></div><div class="item">🎮 10 ta o‘yin <span>+500</span></div><div class="item">🏆 TOP 10 ga kirish <span>+2000</span></div></div></section>
@@ -40,6 +40,17 @@ function openPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.
 function goHome(){openPage('home')}
 function toast(t){if(tg?.showAlert)tg.showAlert(t);else alert(t)}
 function copyRef(){const x=document.getElementById('reflink');if(!x.value||x.value.startsWith('Telegram')){toast('Avval Telegram orqali oching');return;}x.select();document.execCommand('copy');toast('Havola nusxalandi')}
+async function claimDailyBonus(){
+ if(!tg?.initData){toast('Bonusni Telegram Mini App ichida oling');return;}
+ const button=document.getElementById('bonusButton');button.disabled=true;button.textContent='Yuklanmoqda...';
+ try{
+  const response=await fetch('/api/daily-claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData})});
+  const data=await response.json();
+  if(!response.ok)throw new Error(data.error||'Bonusni olib bo‘lmadi');
+  document.getElementById('bonusStatus').textContent='Bugungi 50 ochko olindi. Ertaga yana keling!';button.textContent='Olingan ✓';
+  toast('Tabriklaymiz! +50 ochko qo‘shildi.');
+ }catch(error){button.disabled=false;button.textContent='Bonusni olish';toast(error.message||'Server bilan aloqa yo‘q');}
+}
 async function loadAccount(){
  if(!tg?.initData){return;}
  try{
@@ -60,6 +71,10 @@ async function loadAccount(){
    item.textContent=(index+1)+'. '+name+' — '+person.referrals+' ta';
    top.appendChild(item);
   });
+  const bonusButton=document.getElementById('bonusButton');
+  const bonusStatus=document.getElementById('bonusStatus');
+  if(data.daily_claimed){bonusButton.disabled=true;bonusButton.textContent='Olingan ✓';bonusStatus.textContent='Bugungi 50 ochko olindi. Ertaga yana keling!';}
+  else{bonusButton.disabled=false;bonusButton.textContent='Bonusni olish';bonusStatus.textContent='Har kuni 50 ochko olish mumkin';}
  }catch(error){toast(error.message||'Server bilan aloqa yo‘q');}
 }
 let xo=Array(9).fill(''),xodone=false;
