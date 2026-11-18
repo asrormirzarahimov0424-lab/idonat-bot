@@ -33,7 +33,7 @@ jobs:
           import re
           from pathlib import Path
           html = Path("webapp/index.html").read_text(encoding="utf-8")
-          scripts = re.findall(r"<script(?:\\s[^>]*)?>(.*?)</script>", html, re.S)
+          scripts = re.findall(r"<script[^>]*>(.*?)</script>", html, re.S)
           if not scripts:
               raise SystemExit("No inline JavaScript found")
           Path("/tmp/miniapp.js").write_text(scripts[-1], encoding="utf-8")
