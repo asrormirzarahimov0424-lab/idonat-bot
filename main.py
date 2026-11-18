@@ -6,6 +6,8 @@ import hmac
 import hashlib
 import json
 import time
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from urllib.parse import parse_qsl
 from pathlib import Path
 from aiohttp import web
@@ -74,6 +76,14 @@ def init_db():
             user_id INTEGER,
             code TEXT,
             UNIQUE(user_id, code)
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS daily_bonus_claims (
+            user_id INTEGER,
+            claim_date TEXT,
+            UNIQUE(user_id, claim_date)
         )
     """)
 
@@ -496,6 +506,14 @@ async def api_me(request):
     con.commit()
     con.close()
 
+    today = datetime.now(ZoneInfo("Asia/Tashkent")).date().isoformat()
+    cur = con.cursor()
+    cur.execute(
+        "SELECT 1 FROM daily_bonus_claims WHERE user_id=? AND claim_date=?",
+        (user_id, today)
+    )
+    daily_claimed = cur.fetchone() is not None
+
     me = await bot.get_me()
     referral_link = f"https://t.me/{me.username}?start=ref_{user_id}"
 
@@ -507,10 +525,64 @@ async def api_me(request):
         "balance": account[0] if account else 0,
         "referrals": account[1] if account else 0,
         "points": account[2] if account else 0,
+        "daily_claimed": daily_claimed,
         "referral_link": referral_link,
         "top10": leaders,
         "orders": []
     })
+
+
+async def api_daily_claim(request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+
+    telegram_user = validate_webapp_init_data(payload.get("initData", ""))
+    if not telegram_user:
+        return web.json_response(
+            {"error": "Telegram orqali qayta oching"}, status=401
+        )
+
+    user_id = int(telegram_user["id"])
+    today = datetime.now(ZoneInfo("Asia/Tashkent")).date().isoformat()
+    con = db()
+    cur = con.cursor()
+
+    try:
+        cur.execute("BEGIN IMMEDIATE")
+        cur.execute(
+            "INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)",
+            (user_id, telegram_user.get("username", "") or "")
+        )
+        cur.execute(
+            "INSERT INTO daily_bonus_claims (user_id, claim_date) VALUES (?, ?)",
+            (user_id, today)
+        )
+        cur.execute("UPDATE users SET points=points+50 WHERE user_id=?", (user_id,))
+        cur.execute("SELECT points, balance FROM users WHERE user_id=?", (user_id,))
+        points, balance = cur.fetchone()
+        con.commit()
+        return web.json_response({
+            "ok": True,
+            "claimed": True,
+            "bonus": 50,
+            "points": points,
+            "balance": balance
+        })
+    except sqlite3.IntegrityError:
+        con.rollback()
+        cur.execute("SELECT points, balance FROM users WHERE user_id=?", (user_id,))
+        account = cur.fetchone() or (0, 0)
+        return web.json_response({
+            "ok": False,
+            "claimed": True,
+            "error": "Bugungi bonusni oldin olgansiz.",
+            "points": account[0],
+            "balance": account[1]
+        }, status=409)
+    finally:
+        con.close()
 
 
 async def mini_app_home(request):
@@ -524,6 +596,7 @@ async def start_web_server():
     app = web.Application()
     app.router.add_get("/", mini_app_home)
     app.router.add_post("/api/me", api_me)
+    app.router.add_post("/api/daily-claim", api_daily_claim)
     app.router.add_get("/health", lambda request: web.json_response({"ok": True, "app": "iDonat Robot"}))
     runner = web.AppRunner(app)
     await runner.setup()
