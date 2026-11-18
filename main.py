@@ -238,7 +238,7 @@ def get_user(user_id, username=""):
 
 
 BOT_TEXT = {
- "uz":{"services":"🛍 Xizmatlar","pubg":"🎮 PUBG UC","numbers":"📞 Virtual raqamlar","balance":"💳 Balans","orders":"📦 Buyurtmalarim","help":"👨‍💻 Yordam","app":"🚀 Mini ilovani ochish","my_balance":"💰 Mening balansim","referral":"🤝 Referal","promo":"🎟 Promokod","top":"🏆 TOP 10","back":"⬅️ Orqaga","home":"🤖 <b>iDonat Robotga xush kelibsiz!</b>\n\nKerakli bo‘limni tanlang.","balance_title":"💳 <b>Balans bo‘limi</b>\n\nKerakli bo‘limni tanlang:","balance_info":"💰 Balansingiz: <b>{balance:,} so‘m</b>\n🤝 Taklif qilganlaringiz: <b>{referrals}</b>\n⭐ O‘yin ochkolari: <b>{points}</b>","ref_info":"🤝 <b>Referal tizimi</b>\n\nDo‘stlaringizni taklif qiling! Har bir yangi foydalanuvchi uchun 100 so‘m virtual balans beriladi.\n\n👥 Taklif qilganlaringiz: <b>{count}</b>\n💰 Havolangiz:\n<code>{link}</code>","promo_prompt":"🎟 Promokodingizni yuboring. Bekor qilish uchun /cancel yozing.","cancel":"Bekor qilindi.","top_title":"🏆 <b>REFERAL TOP 10</b>\n\n","no_results":"Hozircha natijalar yo‘q.","user":"Foydalanuvchi","top_note":"\n⭐ O‘yin TOP 10 alohida tizimda yuritiladi.","services_info":"🛍 <b>Xizmatlar</b>\n\nBuyurtmalarni Mini App orqali yuboring. Provayder ulanmagan xizmatlar avtomatik bajarilmaydi.","pubg_info":"🎮 <b>PUBG UC</b>\n\nUC buyurtmasini Mini App orqali yuborishingiz mumkin. Rasmiy provayder ulanmaguncha avtomatik yetkazib berish mavjud emas.","numbers_info":"📞 <b>Virtual raqamlar</b>\n\nBu xizmat provayder ulangandan keyin faollashadi.","orders_info":"📦 Buyurtmalaringizni ko‘rish uchun Mini App ichidagi «Buyurtmalar» bo‘limini oching.","help_info":"👨‍💻 <b>Yordam</b>\n\n/start — bosh menyu\n/app — Mini App\n/balance — balans\n/referral — referal havolasi\n/top — TOP 10\n/language — tilni almashtirish\n/cancel — amalni bekor qilish\n\nSavollar bo‘lsa, administratorga murojaat qiling.","back_info":"Asosiy menyu:","choose":"Kerakli bo‘limni menyudan tanlang.","mini":"🚀 <b>Mini ilovani ochish:</b>","app_missing":"Mini App manzili sozlanmagan. Administratorga murojaat qiling.","language_saved":"Til saqlandi!","subscribe":"🔒 <b>Botdan foydalanish uchun kanalimizga obuna bo‘ling.</b>\n\n📢 @Cr7_Siu_Pubg kanaliga qo‘shiling, so‘ng «Obunani tekshirish» tugmasini bosing.","join":"📢 Kanalga obuna bo‘lish","check":"✅ Obunani tekshirish","sub_admin":"⚠️ Botni @Cr7_Siu_Pubg kanaliga administrator qilib qo‘shing.","sub_ok":"✅ Obuna tasdiqlandi!","sub_no":"❌ Hali kanalga obuna bo‘lmagansiz.","lang_prompt":"Tilni tanlang:"},
+ "uz":{"services":"🛍 Xizmatlar","pubg":"🎮 PUBG UC","numbers":"📞 Virtual raqamlar","balance":"💳 Balans","orders":"📦 Buyurtmalarim","help":"👨‍💻 Yordam","app":"🚀 Mini ilovani ochish","my_balance":"💰 Mening balansim","referral":"🤝 Referal","promo":"🎟 Promokod","top":"🏆 TOP 10","back":"⬅️ Orqaga","home":"🤖 <b>iDonat Robotga xush kelibsiz!</b>\n\nKerakli bo‘limni tanlang.","balance_title":"💳 <b>Balans bo‘limi</b>\n\nKerakli bo‘limni tanlang:","balance_info":"💰 Balansingiz: <b>{balance:,} so‘m</b>\n🤝 Taklif qilganlaringiz: <b>{referrals}</b>\n⭐ O‘yin ochkolari: <b>{points}</b>","ref_info":"🤝 <b>Referal tizimi</b>\n\nDo‘stlaringizni taklif qiling! Har bir yangi foydalanuvchi uchun 100 so‘m virtual balans beriladi.\n\n👥 Taklif qilganlaringiz: <b>{count}</b>\n💰 Havolangiz:\n<code>{link}</code>","promo_prompt":"🎟 Promokodingizni yuboring. Bekor qilish uchun /cancel yozing.","cancel":"Bekor qilindi.","top_title":"🏆 <b>REFERAL TOP 10</b>\n\n","no_results":"Hozircha natijalar yo‘q.","user":"Foydalanuvchi","top_note":"\n⭐ O‘yin TOP 10 alohida tizimda yuritiladi.","services_info":"🛍 <b>Xizmatlar</b>\n\nBuyurtmalarni Mini App orqali yuboring. Provayder ulanmagan xizmatlar avtomatik bajarilmaydi.","pubg_info":"🎮 <b>PUBG UC</b>\n\nUC buyurtmasini Mini App orqali yuborishingiz mumkin. Rasmiy provayder ulanmaguncha avtomatik yetkazib berish mavjud emas.","numbers_info":"📞 <b>Virtual raqamlar</b>\n\nBu xizmat provayder ulangandan keyin faollashadi.","orders_info":"📦 Buyurtmalaringizni ko‘rish uchun Mini App ichidagi «Buyurtmalar» bo‘limini oching.","help_info":"👨‍💻 <b>Yordam</b>\n\n/start — bosh menyu\n/app — Mini App\n/balance — balans\n/referral — referal havolasi\n/top — TOP 10\n/language — tilni almashtirish\n/cancel — amalni bekor qilish\n\nSavollar bo‘lsa, administratorga murojaat qiling.","back_info":"Asosiy menyu:","choose":"Kerakli bo‘limni menyudan tanlang.","mini":tr(message.from_user.id, "mini"),"app_missing":"Mini App manzili sozlanmagan. Administratorga murojaat qiling.","language_saved":"Til saqlandi!","subscribe":"🔒 <b>Botdan foydalanish uchun kanalimizga obuna bo‘ling.</b>\n\n📢 @Cr7_Siu_Pubg kanaliga qo‘shiling, so‘ng «Obunani tekshirish» tugmasini bosing.","join":"📢 Kanalga obuna bo‘lish","check":"✅ Obunani tekshirish","sub_admin":"⚠️ Botni @Cr7_Siu_Pubg kanaliga administrator qilib qo‘shing.","sub_ok":"✅ Obuna tasdiqlandi!","sub_no":"❌ Hali kanalga obuna bo‘lmagansiz.","lang_prompt":"Tilni tanlang:"},
  "ru":{"services":"🛍 Услуги","pubg":"🎮 PUBG UC","numbers":"📞 Виртуальные номера","balance":"💳 Баланс","orders":"📦 Мои заказы","help":"👨‍💻 Помощь","app":"🚀 Открыть Mini App","my_balance":"💰 Мой баланс","referral":"🤝 Рефералы","promo":"🎟 Промокод","top":"🏆 ТОП 10","back":"⬅️ Назад","home":"🤖 <b>Добро пожаловать в iDonat Robot!</b>\n\nВыберите нужный раздел.","balance_title":"💳 <b>Баланс</b>\n\nВыберите нужный пункт:","balance_info":"💰 Баланс: <b>{balance:,} сум</b>\n🤝 Приглашено вами: <b>{referrals}</b>\n⭐ Игровые очки: <b>{points}</b>","ref_info":"🤝 <b>Реферальная система</b>\n\nПриглашайте друзей! За каждого нового пользователя начисляется 100 сум виртуального баланса.\n\n👥 Приглашено: <b>{count}</b>\n💰 Ваша ссылка:\n<code>{link}</code>","promo_prompt":"🎟 Отправьте промокод. Для отмены используйте /cancel.","cancel":"Отменено.","top_title":"🏆 <b>РЕФЕРАЛЬНЫЙ ТОП 10</b>\n\n","no_results":"Пока результатов нет.","user":"Пользователь","top_note":"\n⭐ Игровой ТОП 10 ведётся отдельно.","services_info":"🛍 <b>Услуги</b>\n\nЗаявки отправляются через Mini App. Автоматическое выполнение пока недоступно без провайдера.","pubg_info":"🎮 <b>PUBG UC</b>\n\nОтправьте заявку через Mini App. Автоматическая доставка требует официального провайдера.","numbers_info":"📞 <b>Виртуальные номера</b>\n\nУслуга станет доступна после подключения провайдера.","orders_info":"📦 Откройте раздел «Заказы» внутри Mini App, чтобы посмотреть заявки.","help_info":"👨‍💻 <b>Помощь</b>\n\n/start — главное меню\n/app — Mini App\n/balance — баланс\n/referral — реферальная ссылка\n/top — ТОП 10\n/language — сменить язык\n/cancel — отменить действие\n\nОбратитесь к администратору, если нужна помощь.","back_info":"Главное меню:","choose":"Выберите раздел в меню.","mini":"🚀 <b>Открыть Mini App:</b>","app_missing":"Адрес Mini App не настроен. Обратитесь к администратору.","language_saved":"Язык сохранён!","subscribe":"🔒 <b>Подпишитесь на канал, чтобы пользоваться ботом.</b>\n\n📢 Вступите в @Cr7_Siu_Pubg, затем нажмите «Проверить подписку».","join":"📢 Подписаться на канал","check":"✅ Проверить подписку","sub_admin":"⚠️ Добавьте бота администратором канала @Cr7_Siu_Pubg.","sub_ok":"✅ Подписка подтверждена!","sub_no":"❌ Вы ещё не подписались на канал.","lang_prompt":"Выберите язык:"},
  "en":{"services":"🛍 Services","pubg":"🎮 PUBG UC","numbers":"📞 Virtual numbers","balance":"💳 Balance","orders":"📦 My orders","help":"👨‍💻 Help","app":"🚀 Open Mini App","my_balance":"💰 My balance","referral":"🤝 Referrals","promo":"🎟 Promo code","top":"🏆 TOP 10","back":"⬅️ Back","home":"🤖 <b>Welcome to iDonat Robot!</b>\n\nChoose a section.","balance_title":"💳 <b>Balance</b>\n\nChoose an option:","balance_info":"💰 Balance: <b>{balance:,} UZS</b>\n🤝 Invited users: <b>{referrals}</b>\n⭐ Game points: <b>{points}</b>","ref_info":"🤝 <b>Referral system</b>\n\nInvite friends! You receive 100 UZS in virtual balance for each new user.\n\n👥 Invited: <b>{count}</b>\n💰 Your referral link:\n<code>{link}</code>","promo_prompt":"🎟 Send your promo code. Use /cancel to cancel.","cancel":"Cancelled.","top_title":"🏆 <b>REFERRAL TOP 10</b>\n\n","no_results":"No results yet.","user":"User","top_note":"\n⭐ Game TOP 10 is tracked separately.","services_info":"🛍 <b>Services</b>\n\nSubmit requests through the Mini App. Automatic fulfillment is unavailable until a provider is connected.","pubg_info":"🎮 <b>PUBG UC</b>\n\nSubmit a UC request through the Mini App. Automatic delivery requires an official provider.","numbers_info":"📞 <b>Virtual numbers</b>\n\nThis service will be available after a provider is connected.","orders_info":"📦 Open the Orders section in the Mini App to view your requests.","help_info":"👨‍💻 <b>Help</b>\n\n/start — main menu\n/app — Mini App\n/balance — balance\n/referral — referral link\n/top — TOP 10\n/language — change language\n/cancel — cancel action\n\nContact the administrator if you need help.","back_info":"Main menu:","choose":"Please choose a section from the menu.","mini":"🚀 <b>Open the Mini App:</b>","app_missing":"The Mini App URL is not configured. Contact the administrator.","language_saved":"Language saved!","subscribe":"🔒 <b>Subscribe to our channel to use the bot.</b>\n\n📢 Join @Cr7_Siu_Pubg, then tap “Check subscription”.","join":"📢 Subscribe to channel","check":"✅ Check subscription","sub_admin":"⚠️ Add the bot as an administrator of @Cr7_Siu_Pubg.","sub_ok":"✅ Subscription confirmed!","sub_no":"❌ You have not subscribed to the channel yet.","lang_prompt":"Choose your language:"}
 }
@@ -321,10 +321,11 @@ async def start(message: Message):
             await send_subscription_prompt(message)
         return
     await finish_referral(user_id)
-    await message.answer("🤖 <b>iDonat Robotga xush kelibsiz!</b>\n\nKerakli bo‘limni tanlang.", reply_markup=main_keyboard())
+    await set_chat_commands(message.chat.id, language)
+    await message.answer(tr(user_id, "home"), reply_markup=main_keyboard(user_id))
     if WEBAPP_URL.startswith("https://"):
         await message.answer("🚀 <b>Mini ilovani shu tugma orqali oching:</b>", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-            InlineKeyboardButton(text="🚀 Mini ilovani ochish", web_app=WebAppInfo(url=WEBAPP_URL))
+            InlineKeyboardButton(text=tr(message.from_user.id, "app"), web_app=WebAppInfo(url=WEBAPP_URL))
         ]]))
 
 
@@ -341,11 +342,12 @@ async def choose_language(callback: CallbackQuery):
     cur.execute("UPDATE users SET language=? WHERE user_id=?", (language, callback.from_user.id))
     con.commit()
     con.close()
-    await callback.answer("Til saqlandi!" if language == "uz" else ("Язык сохранён!" if language == "ru" else "Language saved!"))
+    await set_chat_commands(callback.message.chat.id, language)
+    await callback.answer(tr(callback.from_user.id, "language_saved"))
     subscribed = await is_subscribed(callback.from_user.id)
     if subscribed is True:
         await finish_referral(callback.from_user.id)
-        await callback.message.answer("🤖 <b>iDonat Robotga xush kelibsiz!</b>\nKerakli bo‘limni tanlang.", reply_markup=main_keyboard())
+        await callback.message.answer(tr(callback.from_user.id, "home"), reply_markup=main_keyboard(callback.from_user.id))
     elif subscribed is False:
         await send_subscription_prompt(callback.message)
     else:
@@ -357,14 +359,14 @@ async def check_subscription(callback: CallbackQuery):
     subscribed = await is_subscribed(callback.from_user.id)
     if subscribed is True:
         await finish_referral(callback.from_user.id)
-        await callback.answer("✅ Obuna tasdiqlandi!")
-        await callback.message.answer("🤖 <b>iDonat Robotga xush kelibsiz!</b>\nKerakli bo‘limni tanlang.", reply_markup=main_keyboard())
+        await callback.answer(tr(callback.from_user.id, "sub_ok"))
+        await callback.message.answer(tr(callback.from_user.id, "home"), reply_markup=main_keyboard(callback.from_user.id))
         if WEBAPP_URL.startswith("https://"):
             await callback.message.answer("🚀 <b>Mini ilovani ochish:</b>", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
                 InlineKeyboardButton(text="🚀 Mini ilovani ochish", web_app=WebAppInfo(url=WEBAPP_URL))
             ]]))
     elif subscribed is False:
-        await callback.answer("❌ Hali kanalga obuna bo‘lmagansiz.", show_alert=True)
+        await callback.answer(tr(callback.from_user.id, "sub_no"), show_alert=True)
     else:
         await callback.answer("⚠️ Bot kanal administratori emas.", show_alert=True)
 
@@ -372,7 +374,7 @@ async def check_subscription(callback: CallbackQuery):
 @dp.message(Command("app"))
 async def open_mini_app(message: Message):
     if not WEBAPP_URL.startswith("https://"):
-        await message.answer("Mini App manzili sozlanmagan. Administratorga murojaat qiling.")
+        await message.answer(tr(message.from_user.id, "app_missing"))
         return
     await message.answer(
         "🚀 <b>Mini ilovani ochish:</b>",
@@ -385,27 +387,51 @@ async def open_mini_app(message: Message):
     )
 
 
-@dp.message(F.text == "💳 Balans")
+
+@dp.message(Command("language"))
+async def change_language_command(message: Message):
+    await message.answer(tr(message.from_user.id, "lang_prompt"), reply_markup=language_keyboard())
+
+
+@dp.message(Command("balance"))
+async def balance_command(message: Message):
+    user = get_user(message.from_user.id, message.from_user.username or "")
+    if user:
+        await message.answer(
+            tr(message.from_user.id, "balance_info").format(balance=user[0], referrals=user[1], points=user[2]),
+            reply_markup=balance_keyboard(message.from_user.id)
+        )
+
+
+@dp.message(Command("referral"))
+async def referral_command(message: Message):
+    await referral(message)
+
+
+@dp.message(Command("top"))
+async def top_command(message: Message):
+    await top10(message)
+
+
+@dp.message(F.text.in_([BOT_TEXT[l]["balance"] for l in BOT_TEXT]))
 async def balance_menu(message: Message):
     await message.answer(
-        "💳 <b>Balans bo‘limi</b>\n\nKerakli bo‘limni tanlang:",
-        reply_markup=balance_keyboard()
+        tr(message.from_user.id, "balance_title"),
+        reply_markup=balance_keyboard(message.from_user.id)
     )
 
 
-@dp.message(F.text == "💰 Mening balansim")
+@dp.message(F.text.in_([BOT_TEXT[l]["my_balance"] for l in BOT_TEXT]))
 async def my_balance(message: Message):
     user = get_user(message.from_user.id, message.from_user.username or '')
 
     if user:
         await message.answer(
-            f"💰 Balansingiz: <b>{user[0]:,} so‘m</b>\n"
-            f"🤝 Taklif qilganlaringiz: <b>{user[1]}</b>\n"
-            f"⭐ O‘yin ochkolari: <b>{user[2]}</b>"
+            tr(message.from_user.id, "balance_info").format(balance=user[0], referrals=user[1], points=user[2])
         )
 
 
-@dp.message(F.text == "🤝 Referal")
+@dp.message(F.text.in_([BOT_TEXT[l]["referral"] for l in BOT_TEXT]))
 async def referral(message: Message):
     user_id = message.from_user.id
     user = get_user(user_id, message.from_user.username or '')
@@ -417,28 +443,22 @@ async def referral(message: Message):
     link = f"https://t.me/{me.username}?start=ref_{user_id}"
 
     await message.answer(
-        "🤝 <b>Referal tizimi</b>\n\n"
-        "Do‘stlaringizni taklif qiling!\n"
-        "Har bir yangi foydalanuvchi uchun 100 so‘m "
-        "virtual balans beriladi.\n\n"
-        f"👥 Taklif qilganlaringiz: <b>{user[1]}</b>\n"
-        f"💰 Referal havolangiz:\n<code>{link}</code>"
+        tr(user_id, "ref_info").format(count=user[1], link=link)
     )
 
 
-@dp.message(F.text == "🎟 Promokod")
+@dp.message(F.text.in_([BOT_TEXT[l]["promo"] for l in BOT_TEXT]))
 async def promo_start(message: Message):
     promo_waiting.add(message.from_user.id)
     await message.answer(
-        "🎟 Promokodingizni yuboring.\n"
-        "Bekor qilish uchun /cancel yozing."
+        tr(message.from_user.id, "promo_prompt")
     )
 
 
 @dp.message(Command("cancel"))
 async def cancel(message: Message):
     promo_waiting.discard(message.from_user.id)
-    await message.answer("Bekor qilindi.", reply_markup=balance_keyboard())
+    await message.answer(tr(message.from_user.id, "cancel"), reply_markup=balance_keyboard(message.from_user.id))
 
 
 async def redeem_promo(message: Message):
@@ -547,7 +567,7 @@ async def add_promo(message: Message):
         await message.answer("❌ Bu promokod avval yaratilgan.")
 
 
-@dp.message(F.text == "🏆 TOP 10")
+@dp.message(F.text.in_([BOT_TEXT[l]["top"] for l in BOT_TEXT]))
 async def top10(message: Message):
     con = db()
     cur = con.cursor()
@@ -560,46 +580,43 @@ async def top10(message: Message):
     rows = cur.fetchall()
     con.close()
 
-    text = "🏆 <b>REFERAL TOP 10</b>\n\n"
+    text = tr(message.from_user.id, "top_title")
 
     if not rows:
-        text += "Hozircha natijalar yo‘q."
+        text += tr(message.from_user.id, "no_results")
     else:
         for i, row in enumerate(rows, 1):
-            name = ("@" + row[0]) if row[0] else "Foydalanuvchi"
+            name = ("@" + row[0]) if row[0] else tr(message.from_user.id, "user")
             text += f"{i}. {name} — {row[1]} ta\n"
 
-    text += "\n⭐ O‘yin TOP 10 alohida tizimda yuritiladi."
+    text += tr(message.from_user.id, "top_note")
     await message.answer(text)
 
 
-@dp.message(F.text == "🛍 Xizmatlar")
+@dp.message(F.text.in_([BOT_TEXT[l]["services"] for l in BOT_TEXT]))
 async def services(message: Message):
     await message.answer(
-        "🛍 <b>Xizmatlar</b>\n\n"
-        "Bu bo‘lim provayder ulangandan keyin faollashadi."
+        tr(message.from_user.id, "services_info")
     )
 
 
-@dp.message(F.text == "🎮 PUBG UC")
+@dp.message(F.text.in_([BOT_TEXT[l]["pubg"] for l in BOT_TEXT]))
 async def pubg(message: Message):
     await message.answer(
-        "🎮 <b>PUBG UC</b>\n\n"
-        "UC buyurtmalari rasmiy provayder ulangandan keyin faollashadi."
+        tr(message.from_user.id, "pubg_info")
     )
 
 
-@dp.message(F.text == "📞 Virtual raqamlar")
+@dp.message(F.text.in_([BOT_TEXT[l]["numbers"] for l in BOT_TEXT]))
 async def numbers(message: Message):
     await message.answer(
-        "📞 <b>Virtual raqamlar</b>\n\n"
-        "Bu xizmat provayder ulangandan keyin faollashadi."
+        tr(message.from_user.id, "numbers_info")
     )
 
 
-@dp.message(F.text == "📦 Buyurtmalarim")
+@dp.message(F.text.in_([BOT_TEXT[l]["orders"] for l in BOT_TEXT]))
 async def orders(message: Message):
-    await message.answer("📦 Hozircha buyurtmalaringiz yo‘q.")
+    await message.answer(tr(message.from_user.id, "orders_info"))
 
 @dp.message(Command("orderstatus"))
 async def order_status_admin(message: Message):
@@ -634,19 +651,18 @@ async def order_status_admin(message: Message):
     await message.answer(f"Buyurtma #{order_id} holati yangilandi: {label}.")
 
 
-@dp.message(F.text == "👨‍💻 Yordam")
+@dp.message(F.text.in_([BOT_TEXT[l]["help"] for l in BOT_TEXT]))
 async def help_user(message: Message):
     await message.answer(
-        "👨‍💻 <b>Yordam</b>\n\n"
-        "Savollaringiz bo‘lsa, administratorga murojaat qiling."
+        tr(message.from_user.id, "help_info")
     )
 
 
-@dp.message(F.text == "⬅️ Orqaga")
+@dp.message(F.text.in_([BOT_TEXT[l]["back"] for l in BOT_TEXT]))
 async def back(message: Message):
     await message.answer(
-        "Asosiy menyu:",
-        reply_markup=main_keyboard()
+        tr(message.from_user.id, "back_info"),
+        reply_markup=main_keyboard(message.from_user.id)
     )
 
 
@@ -660,8 +676,8 @@ async def other_messages(message: Message):
         return
 
     await message.answer(
-        "Kerakli bo‘limni menyudan tanlang.",
-        reply_markup=main_keyboard()
+        tr(message.from_user.id, "choose"),
+        reply_markup=main_keyboard(message.from_user.id)
     )
 
 
