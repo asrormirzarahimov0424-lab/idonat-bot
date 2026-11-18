@@ -91,14 +91,19 @@ def init_db():
     con.close()
 
 
-def get_user(user_id):
+def get_user(user_id, username=""):
     con = db()
     cur = con.cursor()
+    cur.execute(
+        "INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)",
+        (user_id, username or "")
+    )
     cur.execute(
         "SELECT balance, referrals, points FROM users WHERE user_id=?",
         (user_id,)
     )
     result = cur.fetchone()
+    con.commit()
     con.close()
     return result
 
@@ -187,7 +192,7 @@ async def balance_menu(message: Message):
 
 @dp.message(F.text == "💰 Mening balansim")
 async def my_balance(message: Message):
-    user = get_user(message.from_user.id)
+    user = get_user(message.from_user.id, message.from_user.username or '')
 
     if user:
         await message.answer(
@@ -200,7 +205,7 @@ async def my_balance(message: Message):
 @dp.message(F.text == "🤝 Referal")
 async def referral(message: Message):
     user_id = message.from_user.id
-    user = get_user(user_id)
+    user = get_user(user_id, message.from_user.username or '')
 
     if not user:
         return
@@ -557,7 +562,7 @@ async def api_daily_claim(request):
             "INSERT INTO daily_bonus_claims (user_id, claim_date) VALUES (?, ?)",
             (user_id, today)
         )
-        cur.execute("UPDATE users SET points=points+50 WHERE user_id=?", (user_id,))
+        cur.execute("UPDATE users SET balance=balance+50 WHERE user_id=?", (user_id,))
         cur.execute("SELECT points, balance FROM users WHERE user_id=?", (user_id,))
         points, balance = cur.fetchone()
         con.commit()
