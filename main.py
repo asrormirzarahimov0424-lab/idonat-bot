@@ -3,6 +3,7 @@ import os
 import sqlite3
 import asyncio
 import hmac
+import html
 import hashlib
 import json
 import time
@@ -763,7 +764,7 @@ async def api_create_order(request):
                 ADMIN_ID,
                 f"🆕 <b>Yangi buyurtma #{order_id}</b>\\n"
                 f"Foydalanuvchi: <code>{user_id}</code>\\n"
-                f"Xizmat: {service}\\nMa’lumot: {details}"
+                f"Xizmat: {html.escape(service)}\\nMa’lumot: {html.escape(details)}"
             )
         except Exception:
             pass
