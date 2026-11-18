@@ -958,6 +958,8 @@ async def api_checkers_queue(request):
     con=db(); cur=con.cursor()
     try:
         cur.execute("BEGIN IMMEDIATE")
+        # Close legacy 8x8 rooms so users are not reconnected to an incompatible board.
+        cur.execute("UPDATE checkers_rooms SET status='finished',winner='draw',updated_at=? WHERE status IN ('waiting','playing') AND json_array_length(board)<>100",(time.time(),))
         cur.execute("SELECT room_id,player_x,player_o,status FROM checkers_rooms WHERE (player_x=? OR player_o=?) AND status IN ('waiting','playing') ORDER BY updated_at DESC LIMIT 1",(uid,uid))
         own=cur.fetchone()
         if own:
