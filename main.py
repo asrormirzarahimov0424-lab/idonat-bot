@@ -503,16 +503,14 @@ async def api_me(request):
         {"username": row[0] or "", "referrals": row[1]}
         for row in cur.fetchall()
     ]
-    con.commit()
-    con.close()
-
     today = datetime.now(ZoneInfo("Asia/Tashkent")).date().isoformat()
-    cur = con.cursor()
     cur.execute(
         "SELECT 1 FROM daily_bonus_claims WHERE user_id=? AND claim_date=?",
         (user_id, today)
     )
     daily_claimed = cur.fetchone() is not None
+    con.commit()
+    con.close()
 
     me = await bot.get_me()
     referral_link = f"https://t.me/{me.username}?start=ref_{user_id}"
