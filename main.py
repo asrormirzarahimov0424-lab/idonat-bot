@@ -772,7 +772,9 @@ def validate_webapp_init_data(init_data):
             return None
 
         auth_date = int(fields.get("auth_date", "0"))
-        if auth_date <= 0 or time.time() - auth_date > 86400:
+        now = int(time.time())
+        # Allow a small clock skew, but reject expired or future-dated initData.
+        if auth_date <= 0 or auth_date > now + 60 or now - auth_date > 86400:
             return None
 
         user = json.loads(fields.get("user", "{}"))
@@ -1006,9 +1008,9 @@ async def api_create_order(request):
         try:
             await bot.send_message(
                 ADMIN_ID,
-                f"🆕 <b>Yangi buyurtma #{order_id}</b>\\n"
-                f"Foydalanuvchi: <code>{user_id}</code>\\n"
-                f"Xizmat: {html.escape(service)}\\nMa’lumot: {html.escape(details)}"
+                f"🆕 <b>Yangi buyurtma #{order_id}</b>\n"
+                f"Foydalanuvchi: <code>{user_id}</code>\n"
+                f"Xizmat: {html.escape(service)}\nMa’lumot: {html.escape(details)}"
             )
         except Exception:
             pass
@@ -1428,6 +1430,8 @@ async def require_channel_subscription(request, handler):
             payload = await request.json()
         except Exception:
             return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+        if not isinstance(payload, dict):
+            return web.json_response({"error": "So‘rov JSON obyekt bo‘lishi kerak"}, status=400)
         telegram_user = validate_webapp_init_data(payload.get("initData", ""))
         if not telegram_user:
             return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
