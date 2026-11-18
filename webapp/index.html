@@ -48,7 +48,7 @@ async function claimDailyBonus(){
   const data=await response.json();
   if(!response.ok)throw new Error(data.error||'Bonusni olib bo‘lmadi');
   document.getElementById('bonusStatus').textContent='Bugungi 50 so‘m olindi. Ertaga yana keling!';button.textContent='Olingan ✓';const money=Number(data.balance||0).toLocaleString('uz-UZ')+' so‘m';document.getElementById('balance').textContent=money;document.getElementById('balance2').textContent=money;
-  toast('Tabriklaymiz! +50 ochko qo‘shildi.');
+  toast('Tabriklaymiz! Balansingizga 50 so‘m qo‘shildi.');
  }catch(error){button.disabled=false;button.textContent='Bonusni olish';toast(error.message||'Server bilan aloqa yo‘q');}
 }
 async function loadAccount(){
