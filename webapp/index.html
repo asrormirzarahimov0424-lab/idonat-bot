@@ -167,14 +167,20 @@ function toast(t){if(tg?.showAlert)tg.showAlert(t);else alert(t)}
 function copyRef(){const x=document.getElementById('reflink');if(!x.value||x.value.startsWith('Telegram')){toast('Avval Telegram orqali oching');return;}x.select();document.execCommand('copy');toast('Havola nusxalandi')}
 async function claimDailyBonus(){
  if(!tg){toast('Telegram WebApp API topilmadi. Botdagi Mini ilovani ochish tugmasidan qayta kiring.');return;} if(!tg.initData){toast('Telegram ochildi, lekin initData kelmadi. Mini App Telegram ichida to‘liq ochilmagan. Botdagi tugmani qayta bosing.');return;}
- const button=document.getElementById('bonusButton');button.disabled=true;button.textContent='Yuklanmoqda...';
+ const button=document.getElementById('bonusButton'),status=document.getElementById('bonusStatus');button.disabled=true;button.textContent='Yuklanmoqda...';
+ let response=null;
  try{
-  const response=await fetch('/api/daily-claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData})});
+  response=await fetch('/api/daily-claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData})});
   const data=await response.json();
   if(!response.ok)throw new Error(data.error||'Bonusni olib bo‘lmadi');
-  document.getElementById('bonusStatus').textContent='Bugungi 50 so‘m olindi. Ertaga yana keling!';button.textContent='Olingan ✓';const money=Number(data.balance||0).toLocaleString(currentLanguage==="ru"?"ru-RU":currentLanguage==="en"?"en-US":"uz-UZ")+' UZS';document.getElementById('balanceAmount').textContent=money;document.getElementById('balance2').textContent=money;
+  status.textContent='Bugungi 50 so‘m olindi. Ertaga yana keling!';button.textContent='Olingan ✓';const money=Number(data.balance||0).toLocaleString(currentLanguage==="ru"?"ru-RU":currentLanguage==="en"?"en-US":"uz-UZ")+' UZS';document.getElementById('balanceAmount').textContent=money;document.getElementById('balance2').textContent=money;
   toast('Tabriklaymiz! Balansingizga 50 so‘m qo‘shildi.');
- }catch(error){button.disabled=false;button.textContent='Bonusni olish';toast(error.message||'Server bilan aloqa yo‘q');}
+ }catch(error){
+  if(response&&response.status===409){button.disabled=true;button.textContent='Olingan ✓';status.textContent='Bugungi bonus avval olingan. Ertaga yana keling!';await loadAccount();toast('Bugungi bonus avval olingan.');return;}
+  button.disabled=false;button.textContent='Bonusni olish';
+  status.textContent=error.message||'Server bilan aloqa yo‘q';
+  toast(error.message||'Server bilan aloqa yo‘q');
+ }
 }
 async function loadAccount(){
  if(!tg?.initData){document.getElementById('toplist').innerHTML='<p class="muted">Telegram ma’lumoti kelmadi. Mini App’ni bot ichidagi tugmadan oching.</p>';return;}
@@ -221,7 +227,7 @@ async function startOnlineXO(){if(!tg?.initData){toast('Telegram ichidagi Mini A
 async function pollOnlineXO(){if(!xoRoom||!tg?.initData)return;try{const r=await fetch('/api/xo/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData,room_id:xoRoom})});const d=await r.json();if(!r.ok)throw new Error(d.error||'O‘yin topilmadi');xo=d.board;xoSymbol=d.symbol;xoTurn=d.turn;xoOpponentReady=d.status==='playing';document.getElementById('xoBoardPanel').style.display='block';if(d.status==='waiting'){document.getElementById('xoOnlineStatus').textContent='Raqib kutilmoqda. Do‘stingiz ham “Odam bilan” tugmasini bossa, o‘yin boshlanadi.';document.getElementById('xostatus').textContent='Siz X. Raqib ulanmoqda...'}else if(d.status==='playing'){document.getElementById('xoOnlineStatus').textContent='Raqib topildi! O‘yin boshlandi.';document.getElementById('xostatus').textContent=d.turn===d.symbol?'Sizning navbatingiz ('+d.symbol+')':'Raqibning navbati ('+d.turn+')'}else{stopXOPoll();document.getElementById('xoOnlineStatus').textContent=d.winner==='draw'?'O‘yin durang tugadi':d.winner===d.symbol?'Siz g‘alaba qozondingiz!':'Raqib g‘alaba qozondi.';document.getElementById('xostatus').textContent=document.getElementById('xoOnlineStatus').textContent;xodone=true}drawXO()}catch(e){stopXOPoll();document.getElementById('xoOnlineStatus').textContent=e.message||'Aloqa uzildi'}}
 async function moveOnlineXO(i){if(!xoRoom||xo[i]||xoSymbol!==xoTurn)return;try{const r=await fetch('/api/xo/move',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData,room_id:xoRoom,cell:i})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Yurish qabul qilinmadi');await pollOnlineXO()}catch(e){toast(e.message||'Yurish yuborilmadi')}}
 function resetXO(){if(xoMode==='online'){backXOOptions();return}startAIXO()}
-let ckBoard=[],ckSide='w',ckMode='ai',ckDifficulty=3,ckSelected=-1,ckLegal=[],ckRoom='',ckSymbol='X',ckPoll=null,ckDone=false,ckOpponentReady=false;
+let ckBoard=[],ckCells=[],ckSide='w',ckMode='ai',ckDifficulty=3,ckSelected=-1,ckLegal=[],ckRoom='',ckSymbol='X',ckPoll=null,ckDone=false,ckOpponentReady=false;
 const CK_N=10;
 function ckInitial(){const a=Array(64).fill('');for(let r=0;r<3;r++)for(let c=0;c<8;c++)if((r+c)%2)a[r*8+c]='b';for(let r=5;r<8;r++)for(let c=0;c<8;c++)if((r+c)%2)a[r*8+c]='w';return a}
 function ckClone(a){return a.slice()}
@@ -264,7 +270,23 @@ function ckLegalMoves(board,side){
 function ckWinner(board,side){let own=0;for(const p of board)if(p&&ckSideOf(p)===side)own++;if(!own||!ckLegalMoves(board,side).length)return side==='w'?'b':'w';return ''}
 function ckApply(move){ckBoard=move.board;ckSide=ckSide==='w'?'b':'w';ckSelected=-1;ckLegal=[];const win=ckWinner(ckBoard,ckSide);if(win){ckDone=true;document.getElementById('ckStatus').textContent=win==='w'?'Oq donalar g‘alaba qozondi!':'Qora donalar g‘alaba qozondi!'}else document.getElementById('ckStatus').textContent=ckSide==='w'?'Oq donalar yuradi':'Qora donalar yuradi';drawCK()}
 function ckMovesForSelected(){return ckLegal.filter(m=>m.from===ckSelected)}
-function drawCK(){const el=document.getElementById('checker');if(!el)return;el.innerHTML='';const canMove=!ckDone&&(ckMode==='online'?(ckOpponentReady&&((ckSymbol==='X'?'w':'b')===ckSide)):ckSide==='w');for(let i=0;i<64;i++){const q=document.createElement('button');q.className='sq '+((Math.floor(i/8)+i%8)%2?'dark':'');if(i===ckSelected)q.style.outline='3px solid #39d7ff';const p=ckBoard[i];if(p){const piece=document.createElement('span');piece.className='piece '+(ckSideOf(p)==='b'?'black':'')+(p===p.toUpperCase()?' king':'');q.appendChild(piece)}if(ckSelected>=0&&ckMovesForSelected().some(m=>m.path[m.path.length-1]===i)){q.style.boxShadow='inset 0 0 0 3px #39d7ff'}q.disabled=!canMove;q.onclick=()=>clickCK(i);el.appendChild(q)}}
+function drawCK(){
+ const el=document.getElementById('checker');if(!el)return;
+ if(ckCells.length!==64||ckCells[0]?.parentElement!==el){
+  el.innerHTML='';ckCells=[];
+  for(let i=0;i<64;i++){const q=document.createElement('button'),piece=document.createElement('span');q.type='button';q.className='sq '+((Math.floor(i/8)+i%8)%2?'dark':'');piece.style.display='none';q.appendChild(piece);q.onclick=()=>clickCK(i);el.appendChild(q);ckCells.push(q)}
+ }
+ const canMove=!ckDone&&(ckMode==='online'?(ckOpponentReady&&((ckSymbol==='X'?'w':'b')===ckSide)):ckSide==='w');
+ for(let i=0;i<64;i++){
+  const q=ckCells[i],piece=q.firstElementChild,p=ckBoard[i];
+  q.className='sq '+((Math.floor(i/8)+i%8)%2?'dark':'');
+  q.style.outline=i===ckSelected?'3px solid #39d7ff':'';
+  q.style.boxShadow=ckSelected>=0&&ckMovesForSelected().some(m=>m.path[m.path.length-1]===i)?'inset 0 0 0 3px #39d7ff':'';
+  q.disabled=!canMove;
+  piece.style.display=p?'block':'none';
+  piece.className='piece '+(p&&ckSideOf(p)==='b'?'black':'')+(p&&p===p.toUpperCase()?' king':'');
+ }
+}
 function clickCK(i){if(ckDone)return;if(ckBoard[i]&&ckSideOf(ckBoard[i])===ckSide&&((ckMode!=='online')||((ckSymbol==='X'?'w':'b')===ckSide))){ckSelected=i;ckLegal=ckLegalMoves(ckBoard,ckSide);drawCK();return}if(ckSelected>=0){const opts=ckMovesForSelected().filter(m=>m.path[m.path.length-1]===i);if(opts.length){const move=opts[0];if(ckMode==='online')sendOnlineCK(move);else{ckApply(move);if(!ckDone&&ckSide==='b')setTimeout(aiTurnCK,180)}return}}}
 function showAICK(){stopCKPoll();document.getElementById('ckModes').style.display='none';document.getElementById('ckOnlinePanel').style.display='none';document.getElementById('ckBoardPanel').style.display='none';document.getElementById('ckAISettings').style.display='block'}
 function backCKOptions(){stopCKPoll();ckRoom='';document.getElementById('ckModes').style.display='block';document.getElementById('ckAISettings').style.display='none';document.getElementById('ckOnlinePanel').style.display='none';document.getElementById('ckBoardPanel').style.display='none'}
