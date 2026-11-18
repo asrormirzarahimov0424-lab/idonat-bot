@@ -999,33 +999,169 @@ async def api_checkers_state(request):
     return web.json_response({"ok":True,"board":json.loads(row[2]),"turn":row[3],"status":row[4],"winner":row[5],"symbol":"X" if int(user["id"])==row[0] else "O"})
 
 
+def checkers_legal_boards(board, side):
+    """Return every legal resulting board for one side under Russian 8x8 rules."""
+    directions = ((-1, -1), (-1, 1), (1, -1), (1, 1))
+    results = []
+
+    def promote(piece, index):
+        row = index // 8
+        if piece == "w" and row == 0:
+            return "W"
+        if piece == "b" and row == 7:
+            return "B"
+        return piece
+
+    def captures_from(start):
+        initial_piece = board[start]
+
+        def walk(position, state, current_piece, captured_count):
+            row, col = divmod(position, 8)
+            king = current_piece in ("W", "B")
+            found = False
+
+            for dr, dc in directions:
+                rr, cc = row + dr, col + dc
+                if king:
+                    while 0 <= rr < 8 and 0 <= cc < 8 and not state[rr * 8 + cc]:
+                        rr += dr
+                        cc += dc
+                    if not (0 <= rr < 8 and 0 <= cc < 8):
+                        continue
+                    enemy_index = rr * 8 + cc
+                    enemy = state[enemy_index]
+                    if not enemy or enemy.lower() == side:
+                        continue
+                    lr, lc = rr + dr, cc + dc
+                    while 0 <= lr < 8 and 0 <= lc < 8 and not state[lr * 8 + lc]:
+                        found = True
+                        target = lr * 8 + lc
+                        next_state = state.copy()
+                        next_state[position] = ""
+                        next_state[enemy_index] = ""
+                        next_state[target] = current_piece
+                        walk(target, next_state, current_piece, captured_count + 1)
+                        lr += dr
+                        lc += dc
+                else:
+                    mr, mc = row + dr, col + dc
+                    tr, tc = row + 2 * dr, col + 2 * dc
+                    if not (0 <= mr < 8 and 0 <= mc < 8 and
+                            0 <= tr < 8 and 0 <= tc < 8):
+                        continue
+                    enemy_index = mr * 8 + mc
+                    target = tr * 8 + tc
+                    enemy = state[enemy_index]
+                    if not enemy or enemy.lower() == side or state[target]:
+                        continue
+                    found = True
+                    next_state = state.copy()
+                    next_state[position] = ""
+                    next_state[enemy_index] = ""
+                    next_piece = promote(current_piece, target)
+                    next_state[target] = next_piece
+                    walk(target, next_state, next_piece, captured_count + 1)
+
+            if not found and captured_count:
+                results.append(state)
+
+        walk(start, board.copy(), initial_piece, 0)
+
+    for index, piece in enumerate(board):
+        if piece and piece.lower() == side:
+            captures_from(index)
+    if results:
+        return results
+
+    for index, piece in enumerate(board):
+        if not piece or piece.lower() != side:
+            continue
+        row, col = divmod(index, 8)
+        king = piece in ("W", "B")
+        move_dirs = directions if king else (
+            ((-1, -1), (-1, 1)) if piece == "w" else ((1, -1), (1, 1))
+        )
+        for dr, dc in move_dirs:
+            rr, cc = row + dr, col + dc
+            while 0 <= rr < 8 and 0 <= cc < 8 and not board[rr * 8 + cc]:
+                target = rr * 8 + cc
+                next_state = board.copy()
+                next_state[index] = ""
+                next_state[target] = promote(piece, target)
+                results.append(next_state)
+                if not king:
+                    break
+                rr += dr
+                cc += dc
+    return results
+
+
 async def api_checkers_move(request):
-    try: payload=await request.json()
-    except Exception: return web.json_response({"error":"Noto‘g‘ri so‘rov"},status=400)
-    user=validate_webapp_init_data(payload.get("initData",""))
-    if not user: return web.json_response({"error":"Telegram orqali qayta oching"},status=401)
-    room_id=str(payload.get("room_id",""))[:20]
-    board=payload.get("board")
-    turn=str(payload.get("turn",""))
-    status=str(payload.get("status","playing"))
-    winner=str(payload.get("winner",""))
-    if not isinstance(board,list) or len(board)!=64 or any(x not in ("","w","b","W","B") for x in board) or turn not in ("X","O") or status not in ("playing","finished") or winner not in ("","X","O","draw"):
-        return web.json_response({"error":"Yurish ma’lumotlari noto‘g‘ri"},status=400)
-    con=db(); cur=con.cursor()
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+
+    user = validate_webapp_init_data(payload.get("initData", ""))
+    if not user:
+        return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
+
+    room_id = str(payload.get("room_id", ""))[:20]
+    submitted_board = payload.get("board")
+    if (not isinstance(submitted_board, list) or len(submitted_board) != 64 or
+            any(piece not in ("", "w", "b", "W", "B") for piece in submitted_board)):
+        return web.json_response({"error": "Yurish ma’lumotlari noto‘g‘ri"}, status=400)
+
+    con = db()
+    cur = con.cursor()
     try:
         cur.execute("BEGIN IMMEDIATE")
-        cur.execute("SELECT player_x,player_o,turn,status FROM checkers_rooms WHERE room_id=?",(room_id,))
-        row=cur.fetchone()
-        if not row or int(user["id"]) not in (row[0],row[1]):
-            con.rollback(); return web.json_response({"error":"Xona topilmadi"},status=404)
-        symbol="X" if int(user["id"])==row[0] else "O"
-        if row[1] is None or row[3]!="playing" or row[2]!=symbol:
-            con.rollback(); return web.json_response({"error":"Hozir sizning navbatingiz emas"},status=409)
-        cur.execute("UPDATE checkers_rooms SET board=?,turn=?,status=?,winner=?,updated_at=? WHERE room_id=?",(json.dumps(board),turn,status,winner,time.time(),room_id))
+        cur.execute(
+            "SELECT player_x, player_o, board, turn, status "
+            "FROM checkers_rooms WHERE room_id=?",
+            (room_id,)
+        )
+        row = cur.fetchone()
+        if not row or int(user["id"]) not in (row[0], row[1]):
+            con.rollback()
+            return web.json_response({"error": "Xona topilmadi"}, status=404)
+
+        player_x, player_o, saved_json, turn, room_status = row
+        symbol = "X" if int(user["id"]) == player_x else "O"
+        if player_o is None or room_status != "playing" or turn != symbol:
+            con.rollback()
+            return web.json_response({"error": "Hozir sizning navbatingiz emas"}, status=409)
+
+        current_board = json.loads(saved_json)
+        if len(current_board) != 64:
+            con.rollback()
+            return web.json_response({"error": "O‘yin taxtasi noto‘g‘ri"}, status=409)
+
+        side = "w" if symbol == "X" else "b"
+        legal_boards = checkers_legal_boards(current_board, side)
+        if not any(candidate == submitted_board for candidate in legal_boards):
+            con.rollback()
+            return web.json_response({"error": "Bu qoida bo‘yicha mumkin bo‘lmagan yurish"}, status=409)
+
+        next_side = "b" if side == "w" else "w"
+        next_symbol = "O" if symbol == "X" else "X"
+        opponent_has_piece = any(piece and piece.lower() == next_side for piece in submitted_board)
+        opponent_can_move = opponent_has_piece and bool(checkers_legal_boards(submitted_board, next_side))
+        next_status = "playing" if opponent_can_move else "finished"
+        winner = "" if opponent_can_move else symbol
+
+        cur.execute(
+            "UPDATE checkers_rooms SET board=?, turn=?, status=?, winner=?, updated_at=? "
+            "WHERE room_id=?",
+            (json.dumps(submitted_board), next_symbol, next_status, winner, time.time(), room_id)
+        )
         con.commit()
-        return web.json_response({"ok":True})
-    except sqlite3.Error:
-        con.rollback(); return web.json_response({"error":"Yurish saqlanmadi"},status=500)
+        return web.json_response({
+            "ok": True, "turn": next_symbol, "status": next_status, "winner": winner
+        })
+    except (sqlite3.Error, ValueError, TypeError):
+        con.rollback()
+        return web.json_response({"error": "Yurishni saqlab bo‘lmadi"}, status=500)
     finally:
         con.close()
 
