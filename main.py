@@ -948,18 +948,18 @@ async def api_checkers_queue(request):
     if not user:
         return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
     uid = int(user["id"])
-    initial = [""] * 100
-    for r in range(4):
-        for c in range(10):
-            if (r+c)%2: initial[r*10+c] = "b"
-    for r in range(6,10):
-        for c in range(10):
-            if (r+c)%2: initial[r*10+c] = "w"
+    initial = [""] * 64
+    for r in range(3):
+        for c in range(8):
+            if (r+c)%2: initial[r*8+c] = "b"
+    for r in range(5,8):
+        for c in range(8):
+            if (r+c)%2: initial[r*8+c] = "w"
     con=db(); cur=con.cursor()
     try:
         cur.execute("BEGIN IMMEDIATE")
         # Close legacy 8x8 rooms so users are not reconnected to an incompatible board.
-        cur.execute("UPDATE checkers_rooms SET status='finished',winner='draw',updated_at=? WHERE status IN ('waiting','playing') AND json_array_length(board)<>100",(time.time(),))
+        cur.execute("UPDATE checkers_rooms SET status='finished',winner='draw',updated_at=? WHERE status IN ('waiting','playing') AND json_array_length(board)<>64",(time.time(),))
         cur.execute("SELECT room_id,player_x,player_o,status FROM checkers_rooms WHERE (player_x=? OR player_o=?) AND status IN ('waiting','playing') ORDER BY updated_at DESC LIMIT 1",(uid,uid))
         own=cur.fetchone()
         if own:
@@ -1009,7 +1009,7 @@ async def api_checkers_move(request):
     turn=str(payload.get("turn",""))
     status=str(payload.get("status","playing"))
     winner=str(payload.get("winner",""))
-    if not isinstance(board,list) or len(board)!=100 or any(x not in ("","w","b","W","B") for x in board) or turn not in ("X","O") or status not in ("playing","finished") or winner not in ("","X","O","draw"):
+    if not isinstance(board,list) or len(board)!=64 or any(x not in ("","w","b","W","B") for x in board) or turn not in ("X","O") or status not in ("playing","finished") or winner not in ("","X","O","draw"):
         return web.json_response({"error":"Yurish ma’lumotlari noto‘g‘ri"},status=400)
     con=db(); cur=con.cursor()
     try:
