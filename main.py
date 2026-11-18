@@ -715,7 +715,7 @@ async def api_me(request):
         (username, user_id)
     )
     cur.execute(
-        "SELECT balance, referrals, points FROM users WHERE user_id=?",
+        "SELECT balance, referrals, points, language FROM users WHERE user_id=?",
         (user_id,)
     )
     account = cur.fetchone()
@@ -750,11 +750,38 @@ async def api_me(request):
         "balance": account[0] if account else 0,
         "referrals": account[1] if account else 0,
         "points": account[2] if account else 0,
+        "language": (account[3] if account and account[3] in ("uz", "ru", "en") else "uz"),
         "daily_claimed": daily_claimed,
         "referral_link": referral_link,
         "top10": leaders,
         "orders": []
     })
+
+
+async def api_set_language(request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+    user = validate_webapp_init_data(payload.get("initData", ""))
+    if not user:
+        return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
+    language = payload.get("language")
+    if language not in ("uz", "ru", "en"):
+        return web.json_response({"error": "Til noto‘g‘ri"}, status=400)
+    con = db()
+    cur = con.cursor()
+    cur.execute(
+        "INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)",
+        (int(user["id"]), user.get("username", "") or "")
+    )
+    cur.execute(
+        "UPDATE users SET language=? WHERE user_id=?",
+        (language, int(user["id"]))
+    )
+    con.commit()
+    con.close()
+    return web.json_response({"ok": True, "language": language})
 
 
 async def api_daily_claim(request):
@@ -1318,6 +1345,7 @@ async def start_web_server():
     app = web.Application(middlewares=[require_channel_subscription])
     app.router.add_get("/", mini_app_home)
     app.router.add_post("/api/me", api_me)
+    app.router.add_post("/api/language", api_set_language)
     app.router.add_post("/api/daily-claim", api_daily_claim)
     app.router.add_post("/api/promo", api_promo)
     app.router.add_post("/api/orders/create", api_create_order)
