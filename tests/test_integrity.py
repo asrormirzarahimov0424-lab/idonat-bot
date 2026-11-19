@@ -143,3 +143,12 @@ def test_balance_credit_is_audited_and_duplicate_reference_rolls_back(tmp_path):
     con.close()
     assert balance == 250
     assert ledger == [(250, 250)]
+
+
+def test_navigation_stops_background_game_loops():
+    html = (Path(__file__).resolve().parents[1] / "webapp" / "index.html").read_text(encoding="utf-8")
+    start = html.index("function openPage(id)")
+    end = html.index("\nlet presenceTimer", start)
+    navigation = html[start:end]
+    for cleanup in ("stopXOPoll()", "stopCKPoll()", "stopRPSPoll()", "stopChessPoll()", "stopAgar()"):
+        assert cleanup in navigation
