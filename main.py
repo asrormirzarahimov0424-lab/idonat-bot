@@ -214,6 +214,22 @@ def init_db():
     """)
 
     cur.execute("""
+        CREATE TABLE IF NOT EXISTS rps_rooms (
+            room_id TEXT PRIMARY KEY,
+            player_a INTEGER NOT NULL,
+            player_b INTEGER,
+            choice_a TEXT NOT NULL DEFAULT '',
+            choice_b TEXT NOT NULL DEFAULT '',
+            round_no INTEGER NOT NULL DEFAULT 1,
+            score_a INTEGER NOT NULL DEFAULT 0,
+            score_b INTEGER NOT NULL DEFAULT 0,
+            resolved INTEGER NOT NULL DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'waiting',
+            updated_at REAL NOT NULL
+        )
+    """)
+
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS checkers_rooms (
             room_id TEXT PRIMARY KEY,
             player_x INTEGER NOT NULL,
@@ -1198,6 +1214,173 @@ def xo_winner(board):
     return "draw" if all(board) else ""
 
 
+def rps_winner(a, b):
+    if a == b:
+        return 0
+    if (a, b) in (("rock", "scissors"), ("paper", "rock"), ("scissors", "paper")):
+        return 1
+    return 2
+
+
+async def api_rps_queue(request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+    user = validate_webapp_init_data(payload.get("initData", ""))
+    if not user:
+        return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
+    uid = int(user["id"])
+    con = db()
+    cur = con.cursor()
+    try:
+        cur.execute("BEGIN IMMEDIATE")
+        cur.execute(
+            "UPDATE rps_rooms SET status='finished', updated_at=? "
+            "WHERE status IN ('waiting','playing') AND updated_at<?",
+            (time.time(), time.time() - 86400)
+        )
+        cur.execute(
+            "SELECT room_id, player_a, player_b, status FROM rps_rooms "
+            "WHERE (player_a=? OR player_b=?) AND status IN ('waiting','playing') "
+            "ORDER BY updated_at DESC LIMIT 1",
+            (uid, uid)
+        )
+        own = cur.fetchone()
+        if own:
+            room_id, pa, pb, status = own
+        else:
+            cur.execute(
+                "SELECT room_id, player_a FROM rps_rooms "
+                "WHERE status='waiting' AND player_b IS NULL AND player_a<>? "
+                "ORDER BY updated_at ASC LIMIT 1",
+                (uid,)
+            )
+            waiting = cur.fetchone()
+            if waiting:
+                room_id, pa = waiting
+                cur.execute(
+                    "UPDATE rps_rooms SET player_b=?, status='playing', updated_at=? "
+                    "WHERE room_id=? AND player_b IS NULL AND status='waiting'",
+                    (uid, time.time(), room_id)
+                )
+                pb, status = uid, "playing"
+            else:
+                room_id = uuid.uuid4().hex[:8].upper()
+                cur.execute(
+                    "INSERT INTO rps_rooms (room_id, player_a, updated_at) VALUES (?, ?, ?)",
+                    (room_id, uid, time.time())
+                )
+                pa, pb, status = uid, None, "waiting"
+        con.commit()
+        return web.json_response({
+            "ok": True, "room_id": room_id,
+            "player": 1 if pa == uid else 2, "status": status
+        })
+    except sqlite3.Error:
+        con.rollback()
+        return web.json_response({"error": "O‘yin xonasiga ulanib bo‘lmadi"}, status=500)
+    finally:
+        con.close()
+
+
+async def api_rps_state(request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+    user = validate_webapp_init_data(payload.get("initData", ""))
+    if not user:
+        return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
+    room_id = str(payload.get("room_id", ""))[:20]
+    uid = int(user["id"])
+    con = db()
+    cur = con.cursor()
+    try:
+        cur.execute(
+            "SELECT player_a, player_b, choice_a, choice_b, round_no, score_a, score_b, "
+            "resolved, status FROM rps_rooms WHERE room_id=?",
+            (room_id,)
+        )
+        row = cur.fetchone()
+    finally:
+        con.close()
+    if not row or uid not in (row[0], row[1]):
+        return web.json_response({"error": "O‘yin xonasi topilmadi"}, status=404)
+    player = 1 if uid == row[0] else 2
+    ready = row[1] is not None
+    return web.json_response({
+        "ok": True, "player": player, "status": row[8],
+        "opponent_connected": ready, "round": row[4],
+        "score_a": row[5], "score_b": row[6],
+        "my_choice": row[2] if player == 1 else row[3],
+        "opponent_choice": (row[3] if player == 1 else row[2]) if row[7] else "",
+        "resolved": bool(row[7])
+    })
+
+
+async def api_rps_move(request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+    user = validate_webapp_init_data(payload.get("initData", ""))
+    if not user:
+        return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
+    room_id = str(payload.get("room_id", ""))[:20]
+    choice = str(payload.get("choice", ""))
+    if choice not in ("rock", "paper", "scissors"):
+        return web.json_response({"error": "Tanlov noto‘g‘ri"}, status=400)
+    uid = int(user["id"])
+    con = db()
+    cur = con.cursor()
+    try:
+        cur.execute("BEGIN IMMEDIATE")
+        cur.execute(
+            "SELECT player_a, player_b, choice_a, choice_b, round_no, score_a, score_b, "
+            "resolved, status FROM rps_rooms WHERE room_id=?",
+            (room_id,)
+        )
+        row = cur.fetchone()
+        if not row or uid not in (row[0], row[1]):
+            con.rollback()
+            return web.json_response({"error": "O‘yin xonasi topilmadi"}, status=404)
+        if row[1] is None or row[8] != "playing":
+            con.rollback()
+            return web.json_response({"error": "Raqib hali ulanmagan"}, status=409)
+        player = 1 if uid == row[0] else 2
+        ca, cb, rnd, sa, sb, resolved = row[2], row[3], row[4], row[5], row[6], row[7]
+        if resolved:
+            ca, cb, resolved = "", "", 0
+            rnd += 1
+        if (player == 1 and ca) or (player == 2 and cb):
+            con.rollback()
+            return web.json_response({"error": "Bu raundda tanlov yuborilgansiz"}, status=409)
+        if player == 1:
+            ca = choice
+        else:
+            cb = choice
+        if ca and cb:
+            result = rps_winner(ca, cb)
+            if result == 1:
+                sa += 1
+            elif result == 2:
+                sb += 1
+            resolved = 1
+        cur.execute(
+            "UPDATE rps_rooms SET choice_a=?, choice_b=?, round_no=?, score_a=?, score_b=?, "
+            "resolved=?, updated_at=? WHERE room_id=?",
+            (ca, cb, rnd, sa, sb, resolved, time.time(), room_id)
+        )
+        con.commit()
+        return web.json_response({"ok": True, "resolved": bool(resolved)})
+    except sqlite3.Error:
+        con.rollback()
+        return web.json_response({"error": "Tanlovni saqlab bo‘lmadi"}, status=500)
+    finally:
+        con.close()
+
+
 async def api_xo_queue(request):
     try:
         payload = await request.json()
@@ -1611,6 +1794,9 @@ async def start_web_server():
     app.router.add_post("/api/promo", api_promo)
     app.router.add_post("/api/orders/create", api_create_order)
     app.router.add_post("/api/orders", api_orders)
+    app.router.add_post("/api/rps/queue", api_rps_queue)
+    app.router.add_post("/api/rps/state", api_rps_state)
+    app.router.add_post("/api/rps/move", api_rps_move)
     app.router.add_post("/api/xo/queue", api_xo_queue)
     app.router.add_post("/api/xo/state", api_xo_state)
     app.router.add_post("/api/xo/move", api_xo_move)
