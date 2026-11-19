@@ -13,10 +13,18 @@ const IDONAT_TRACKS={
  arcade:{name:'⚡ iDonat — Arcade Energy',tempo:128,notes:[261.63,329.63,392,523.25,392,329.63,293.66,440],bass:[130.81,164.81,196,146.83]}
 };
 let idAudioCtx=null,idMaster=null,idMusicTimer=null,idStep=0,idTrack='neon',idPlaying=false,idSfx=true,idVolume=0.35;
-function audioInit(){
- const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;
- if(!idAudioCtx){idAudioCtx=new AC();idMaster=idAudioCtx.createGain();idMaster.gain.value=idVolume;idMaster.connect(idAudioCtx.destination)}
- if(idAudioCtx.state==='suspended')idAudioCtx.resume();return true
+async function audioInit(){
+ const AC=window.AudioContext||window.webkitAudioContext;
+ if(!AC)throw new Error('AudioContext qo‘llab-quvvatlanmaydi');
+ if(!idAudioCtx){
+  idAudioCtx=new AC();
+  idMaster=idAudioCtx.createGain();
+  idMaster.gain.value=idVolume;
+  idMaster.connect(idAudioCtx.destination);
+ }
+ if(idAudioCtx.state!=='running')await idAudioCtx.resume();
+ if(idAudioCtx.state!=='running')throw new Error('Telefon ovoz tizimi ishga tushmadi');
+ return true;
 }
 function audioTone(freq,duration,type='sine',gain=.08,when=0){
  if(!idAudioCtx||!idMaster)return;const t=idAudioCtx.currentTime+when,o=idAudioCtx.createOscillator(),g=idAudioCtx.createGain();
@@ -30,10 +38,23 @@ function audioBeat(){
  if(idStep%4===0)audioTone(900,.035,'sine',.012,.01);
  idStep++
 }
-function audioToggle(){
- if(idPlaying){audioPause();return}if(!audioInit()){toast('Bu qurilmada audio qo‘llab-quvvatlanmaydi');return}
- idPlaying=true;audioBeat();idMusicTimer=setInterval(audioBeat,60000/IDONAT_TRACKS[idTrack].tempo/2);
- document.getElementById('audioPlay').textContent='⏸';document.getElementById('audioState').textContent='Original musiqa ijro etilmoqda'
+async function audioToggle(){
+ if(idPlaying){audioPause();return}
+ const state=document.getElementById('audioState'),button=document.getElementById('audioPlay');
+ try{
+  if(state)state.textContent='Ovoz tizimi ishga tushmoqda…';
+  await audioInit();
+  idPlaying=true;
+  audioBeat();
+  idMusicTimer=setInterval(audioBeat,60000/IDONAT_TRACKS[idTrack].tempo/2);
+  if(button)button.textContent='⏸';
+  if(state)state.textContent='Original musiqa ijro etilmoqda';
+ }catch(err){
+  idPlaying=false;
+  if(button)button.textContent='▶';
+  if(state)state.textContent='Ovoz ishga tushmadi: '+(err?.message||'telefon ovozini tekshiring');
+  console.error('iDonat audio error:',err);
+ }
 }
 function audioPause(){idPlaying=false;if(idMusicTimer)clearInterval(idMusicTimer);idMusicTimer=null;const b=document.getElementById('audioPlay');if(b)b.textContent='▶';const st=document.getElementById('audioState');if(st)st.textContent='Pauza'}
 function audioStop(){audioPause();idStep=0;const st=document.getElementById('audioState');if(st)st.textContent='To‘xtatilgan'}
@@ -46,10 +67,15 @@ function audioSelectTrack(key){
 }
 function audioSetVolume(v){idVolume=Math.max(0,Math.min(1,Number(v)/100));if(idMaster)idMaster.gain.setTargetAtTime(idVolume,idAudioCtx.currentTime,.03);try{localStorage.setItem('idonat_audio_volume',String(v))}catch(e){}}
 function audioToggleSfx(){idSfx=!idSfx;const b=document.getElementById('audioSfx');b.textContent=idSfx?'🔊':'🔇';try{localStorage.setItem('idonat_audio_sfx',idSfx?'1':'0')}catch(e){}}
-function audioEffect(kind='tap'){
- if(!idSfx)return;if(!audioInit())return;
- const sounds={tap:[620,.055,'sine',.025],success:[880,.11,'triangle',.055],error:[180,.16,'sawtooth',.035],bonus:[660,.09,'sine',.05],move:[420,.045,'triangle',.02]};
- const a=sounds[kind]||sounds.tap;audioTone(a[0],a[1],a[2],a[3]);if(kind==='success'||kind==='bonus')audioTone(a[0]*1.25,.12,'sine',a[3]*.7,.09)
+async function audioEffect(kind='tap'){
+ if(!idSfx)return;
+ try{
+  await audioInit();
+  const sounds={tap:[620,.055,'sine',.025],success:[880,.11,'triangle',.055],error:[180,.16,'sawtooth',.035],bonus:[660,.09,'sine',.05],move:[420,.045,'triangle',.02]};
+  const a=sounds[kind]||sounds.tap;
+  audioTone(a[0],a[1],a[2],a[3]);
+  if(kind==='success'||kind==='bonus')audioTone(a[0]*1.25,.12,'sine',a[3]*.7,.09);
+ }catch(err){console.warn('iDonat sound effect:',err)}
 }
 document.addEventListener('DOMContentLoaded',function initAudioUI(){
  try{
