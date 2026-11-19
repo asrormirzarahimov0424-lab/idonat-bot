@@ -66,7 +66,7 @@ button:disabled{opacity:.48;cursor:not-allowed;transform:none}
 @media(max-width:390px){.wrap{padding-left:12px;padding-right:12px}.grid{gap:8px}.tile{min-height:100px;font-size:12px}.hero{padding:19px 15px}.hero h1{font-size:22px}.balance{padding:12px}.amount{font-size:19px}.nav button{font-size:11px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 
-.checker,.sq{transition:none!important;animation:none!important;-webkit-tap-highlight-color:transparent;touch-action:manipulation}.sq:active{transform:none!important;filter:none!important}.checker{isolation:isolate;backface-visibility:hidden}
+.checker,.sq{transition:none!important;animation:none!important;-webkit-tap-highlight-color:transparent;touch-action:manipulation}.sq:active{transform:none!important;filter:none!important}.sq.selected{outline:3px solid #39d7ff;outline-offset:-3px}.sq.target{box-shadow:inset 0 0 0 3px #39d7ff}
 #chessBoard{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));width:min(100%,440px);margin:14px auto;border:5px solid #72543b;border-radius:12px;overflow:hidden;box-shadow:0 10px 28px #0005;touch-action:manipulation}#chessBoard button{aspect-ratio:1;min-width:0;padding:0;border:0;border-radius:0;display:grid;place-items:center;font-family:"Segoe UI Symbol","DejaVu Sans",serif;font-size:clamp(22px,7.5vw,43px);line-height:1;background:#f0d9b5;color:#171717}#chessBoard button.dark{background:#b58863}#chessBoard button.selected{box-shadow:inset 0 0 0 4px #facc15}#chessBoard button.target{box-shadow:inset 0 0 0 4px #35c978}#chessBoard button:disabled{opacity:1}#chessBoard .whitePiece{color:#fffdf4;text-shadow:0 1px 2px #171717,1px 0 1px #171717,-1px 0 1px #171717}#chessBoard .blackPiece{color:#171717;text-shadow:0 1px 1px #fff8}#chessStatus{padding:10px 12px;border:1px solid #304765;border-radius:12px;background:#101e34;font-weight:750;text-align:center}#chessMoves{max-height:110px;overflow:auto;color:var(--muted);font-size:12px;margin-top:8px;word-break:break-word}#chessPromotion{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin:10px 0}#chessPromotion button{font-size:23px;min-width:52px}
 </style></head>
 <body><main class="wrap">
@@ -296,14 +296,16 @@ function drawCK(){
   for(let i=0;i<64;i++){const q=document.createElement('button'),piece=document.createElement('span');q.type='button';q.className='sq '+((Math.floor(i/8)+i%8)%2?'dark':'');piece.style.display='none';q.appendChild(piece);q.onclick=()=>clickCK(i);el.appendChild(q);ckCells.push(q)}
  }
  const canMove=!ckDone&&(ckMode==='online'?(ckOpponentReady&&((ckSymbol==='X'?'w':'b')===ckSide)):ckSide==='w');
+ const targets=new Set(ckSelected>=0?ckMovesForSelected().map(m=>m.path[m.path.length-1]):[]);
  for(let i=0;i<64;i++){
   const q=ckCells[i],piece=q.firstElementChild,p=ckBoard[i];
-  q.className='sq '+((Math.floor(i/8)+i%8)%2?'dark':'');
-  q.style.outline=i===ckSelected?'3px solid #39d7ff':'';
-  q.style.boxShadow=ckSelected>=0&&ckMovesForSelected().some(m=>m.path[m.path.length-1]===i)?'inset 0 0 0 3px #39d7ff':'';
-  q.disabled=!canMove;
-  piece.style.display=p?'block':'none';
-  piece.className='piece '+(p&&ckSideOf(p)==='b'?'black':'')+(p&&p===p.toUpperCase()?' king':'');
+  q.classList.toggle('selected',i===ckSelected);
+  q.classList.toggle('target',targets.has(i));
+  if(q.disabled===canMove)q.disabled=!canMove;
+  const visible=p?'block':'none';
+  if(piece.style.display!==visible)piece.style.display=visible;
+  const cls='piece '+(p&&ckSideOf(p)==='b'?'black':'')+(p&&p===p.toUpperCase()?' king':'');
+  if(piece.className!==cls)piece.className=cls;
  }
 }
 function clickCK(i){if(ckDone)return;if(ckBoard[i]&&ckSideOf(ckBoard[i])===ckSide&&((ckMode!=='online')||((ckSymbol==='X'?'w':'b')===ckSide))){ckSelected=i;ckLegal=ckLegalMoves(ckBoard,ckSide);drawCK();return}if(ckSelected>=0){const opts=ckMovesForSelected().filter(m=>m.path[m.path.length-1]===i);if(opts.length){const move=opts[0];if(ckMode==='online')sendOnlineCK(move);else{ckApply(move);if(!ckDone&&ckSide==='b')setTimeout(aiTurnCK,180)}return}}}
