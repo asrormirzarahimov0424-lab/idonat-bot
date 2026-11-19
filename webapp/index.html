@@ -319,7 +319,7 @@ button{
 <section id="games" class="page"><button class="back" onclick="goHome()">← Orqaga</button><h2>🎮 O‘yinlar</h2><div class="grid"><button class="tile" onclick="openPage('checkers')">♟️<br>Shashka</button><button class="tile" onclick="openPage('xo')">❌⭕<br>X-O</button><button class="tile" onclick="openPage('rps')">🪨📄✂️<br>Tosh-qaychi-qog‘oz</button><button class="tile" onclick="openPage('agar')"><span class="emoji">🟢</span>Agar.io</button><button class="tile" onclick="openPage('chess')"><span class="emoji">♟️</span>Shahmat</button></div></section>
 
 <section id="agar" class="page"><button class="back" onclick="stopAgar();openPage('games')">← O‘yinlar</button><h2>🟢 Agar.io</h2><div class="panel"><div class="agar-hud"><span id="agarScore">Massa: 10</span><span id="agarRank">Raqiblar: 10</span></div><canvas id="agarCanvas" width="720" height="520" aria-label="Agar.io o‘yini"></canvas><p class="agar-help" id="agarStatus">Sharni barmog‘ingiz bilan kerakli tomonga boshqaring. Nuqtalarni yig‘ing va kichik raqiblarni yuting!</p><button class="primary" id="agarStart" style="width:100%;margin-top:12px" onclick="startAgar()">▶ O‘yinni boshlash</button></div></section>
-<section id="rps" class="page"><button class="back" onclick="openPage('games')">← O‘yinlar</button><h2>🪨📄✂️ Tosh–qaychi–qog‘oz</h2><div class="panel" id="rpsModes"><b>O‘yin turini tanlang</b><div class="list" style="margin-top:12px"><button class="primary" onclick="startRPS('bot')">🤖 Kompyuter bilan</button><button onclick="startRPS('friend')">👥 Do‘st bilan (bitta telefon)</button></div></div><div class="panel" id="rpsPlay" style="display:none"><div class="row"><b id="rpsRoundTitle">1-raund</b><span class="tag" id="rpsModeLabel">Kompyuter</span></div><p class="muted" id="rpsInstruction">Tanlovingizni bosing</p><div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr));margin:14px 0"><button class="tile" onclick="pickRPS('rock')"><span class="emoji">🪨</span>Tosh</button><button class="tile" onclick="pickRPS('paper')"><span class="emoji">📄</span>Qog‘oz</button><button class="tile" onclick="pickRPS('scissors')"><span class="emoji">✂️</span>Qaychi</button></div><div class="panel" id="rpsResult" style="display:none;text-align:center"><div class="muted" id="rpsChoices"></div><h3 id="rpsOutcome"></h3></div><div class="row"><span id="rpsScore">Siz 0 : 0 Raqib</span><button onclick="resetRPS()">Qayta boshlash</button></div><button style="width:100%;margin-top:10px" onclick="showRPSModes()">Rejimni almashtirish</button></div></section>
+<section id="rps" class="page"><button class="back" onclick="openPage('games')">← O‘yinlar</button><h2>🪨📄✂️ Tosh–qaychi–qog‘oz</h2><div class="panel" id="rpsModes"><b>O‘yin turini tanlang</b><div class="list" style="margin-top:12px"><button class="primary" onclick="startRPS('bot')">🤖 Kompyuter bilan</button><button onclick="startOnlineRPS()">🌐 Do‘st bilan (onlayn)</button></div></div><div class="panel" id="rpsOnlinePanel" style="display:none"><div class="muted" id="rpsRoomCode"></div></div><div class="panel" id="rpsPlay" style="display:none"><div class="row"><b id="rpsRoundTitle">1-raund</b><span class="tag" id="rpsModeLabel">Kompyuter</span></div><p class="muted" id="rpsInstruction">Tanlovingizni bosing</p><div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr));margin:14px 0"><button class="tile" onclick="pickRPS('rock')"><span class="emoji">🪨</span>Tosh</button><button class="tile" onclick="pickRPS('paper')"><span class="emoji">📄</span>Qog‘oz</button><button class="tile" onclick="pickRPS('scissors')"><span class="emoji">✂️</span>Qaychi</button></div><div class="panel" id="rpsResult" style="display:none;text-align:center"><div class="muted" id="rpsChoices"></div><h3 id="rpsOutcome"></h3></div><div class="row"><span id="rpsScore">Siz 0 : 0 Raqib</span><button onclick="resetRPS()">Qayta boshlash</button></div><button style="width:100%;margin-top:10px" onclick="showRPSModes()">Rejimni almashtirish</button></div></section>
 <section id="checkers" class="page"><button class="back" onclick="openPage('games')">← O‘yinlar</button><h2>♟️ Shashka</h2>
 <div class="panel" id="ckModes"><b>O‘yin turini tanlang</b><div class="list" style="margin-top:12px"><button class="primary" onclick="startOnlineCK()">👥 Odam bilan (onlayn)</button><button onclick="showAICK()">🤖 Kompyuter bilan</button></div></div>
 <div class="panel" id="ckAISettings" style="display:none"><b>Kompyuter qiyinligi</b><select class="input" id="ckDifficulty"><option value="1">1 — Juda oson</option><option value="2">2 — Oson</option><option value="3" selected>3 — O‘rtacha</option><option value="4">4 — Qiyin</option><option value="5">5 — Eng qiyin</option></select><button class="primary" onclick="startAICK()">O‘yinni boshlash</button></div>
@@ -408,7 +408,68 @@ function showRPSModes(){document.getElementById('rpsModes').style.display='block
 function updateRPSScore(){document.getElementById('rpsRoundTitle').textContent='Raund '+rpsTurn;document.getElementById('rpsScore').textContent=(rpsMode==='bot'?'Siz ':'1-o‘yinchi ')+rpsScoreA+' : '+rpsScoreB+(rpsMode==='bot'?' Kompyuter':' 2-o‘yinchi')}
 function rpsWinner(a,b){if(a===b)return 0;if((a==='rock'&&b==='scissors')||(a==='paper'&&b==='rock')||(a==='scissors'&&b==='paper'))return 1;return 2}
 function pickRPS(choice){if(rpsLocked)return;if(rpsMode==='friend'&&!rpsFirst){rpsFirst=choice;rpsLocked=true;document.getElementById('rpsInstruction').textContent='Tanlov yashirildi. Telefonni do‘stingizga bering.';document.querySelectorAll('#rpsPlay .grid button').forEach(b=>b.disabled=true);setTimeout(()=>{document.getElementById('rpsInstruction').textContent='Endi 2-o‘yinchi tanlasin';document.querySelectorAll('#rpsPlay .grid button').forEach(b=>b.disabled=false);rpsLocked=false},1000);return}const other=rpsMode==='bot'?['rock','paper','scissors'][Math.floor(Math.random()*3)]:rpsFirst;const a=rpsMode==='bot'?choice:rpsFirst,b=rpsMode==='bot'?other:choice,w=rpsWinner(a,b);if(w===1)rpsScoreA++;else if(w===2)rpsScoreB++;document.getElementById('rpsChoices').textContent=(rpsMode==='bot'?'Siz: ':'1-o‘yinchi: ')+rpsNames[a]+'  |  '+(rpsMode==='bot'?'Kompyuter: ':'2-o‘yinchi: ')+rpsNames[b];document.getElementById('rpsOutcome').textContent=w===0?'Durang!':w===1?(rpsMode==='bot'?'Siz yutdingiz!':'1-o‘yinchi yutdi!'):(rpsMode==='bot'?'Kompyuter yutdi!':'2-o‘yinchi yutdi!');document.getElementById('rpsResult').style.display='block';rpsTurn++;rpsFirst='';document.getElementById('rpsInstruction').textContent=rpsMode==='bot'?'Yana tanlov qiling':'Yangi raund: 1-o‘yinchi tanlasin';updateRPSScore()}
-function resetRPS(){startRPS(rpsMode)}
+function resetRPS(){if(rpsMode==='online'){backOnlineRPS();return}startRPS(rpsMode)}
+let rpsRoom='',rpsPlayer=1,rpsPoll=null,rpsOnlineLocked=false;
+function stopRPSPoll(){if(rpsPoll){clearInterval(rpsPoll);rpsPoll=null}}
+function backOnlineRPS(){stopRPSPoll();rpsRoom='';document.getElementById('rpsModes').style.display='block';document.getElementById('rpsPlay').style.display='none';document.getElementById('rpsOnlinePanel').style.display='none'}
+async function startOnlineRPS(){
+ if(!tg?.initData){toast('Telegram ichidagi Mini App orqali oching');return}
+ stopRPSPoll();rpsMode='online';rpsOnlineLocked=false;
+ document.getElementById('rpsModes').style.display='none';
+ document.getElementById('rpsPlay').style.display='block';
+ document.getElementById('rpsOnlinePanel').style.display='block';
+ document.getElementById('rpsResult').style.display='none';
+ document.getElementById('rpsModeLabel').textContent='🌐 Onlayn';
+ document.getElementById('rpsInstruction').textContent='Raqib qidirilmoqda...';
+ document.getElementById('rpsChoices').textContent='';
+ document.getElementById('rpsOutcome').textContent='';
+ try{
+  const r=await fetch('/api/rps/queue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData})});
+  const d=await r.json();if(!r.ok)throw new Error(d.error||'Ulanib bo‘lmadi');
+  rpsRoom=d.room_id;rpsPlayer=d.player;
+  document.getElementById('rpsRoomCode').textContent='Xona: '+rpsRoom+' · Do‘stingiz ham onlayn rejimga kirsin';
+  await pollOnlineRPS();rpsPoll=setInterval(pollOnlineRPS,1200);
+ }catch(e){document.getElementById('rpsInstruction').textContent=e.message||'Server bilan aloqa yo‘q'}
+}
+async function pollOnlineRPS(){
+ if(!rpsRoom||!tg?.initData)return;
+ try{
+  const r=await fetch('/api/rps/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData,room_id:rpsRoom})});
+  const d=await r.json();if(!r.ok)throw new Error(d.error||'O‘yin topilmadi');
+  rpsPlayer=d.player;rpsTurn=d.round;rpsScoreA=d.score_a;rpsScoreB=d.score_b;
+  document.getElementById('rpsRoundTitle').textContent='Raund '+d.round;
+  document.getElementById('rpsScore').textContent='1-o‘yinchi '+d.score_a+' : '+d.score_b+' 2-o‘yinchi';
+  const buttons=document.querySelectorAll('#rpsPlay .grid button');
+  if(!d.opponent_connected){document.getElementById('rpsInstruction').textContent='Raqib kutilmoqda. Do‘stingiz ham shu Mini App’da onlayn o‘yinni bosing.';buttons.forEach(b=>b.disabled=true);return}
+  if(d.resolved){
+   buttons.forEach(b=>b.disabled=true);
+   const a=d.player===1?d.my_choice:d.opponent_choice,b=d.player===1?d.opponent_choice:d.my_choice;
+   const win=rpsWinner(a,b);
+   document.getElementById('rpsChoices').textContent='1-o‘yinchi: '+rpsNames[a]+' | 2-o‘yinchi: '+rpsNames[b];
+   document.getElementById('rpsOutcome').textContent=win===0?'Durang!':(win===d.player?'Siz yutdingiz!':'Raqib yutdi!');
+   document.getElementById('rpsResult').style.display='block';
+   document.getElementById('rpsInstruction').textContent='Keyingi raund uchun tanlov qiling';
+   rpsOnlineLocked=false;
+  }else{
+   document.getElementById('rpsResult').style.display='none';
+   buttons.forEach(b=>b.disabled=!!d.my_choice||rpsOnlineLocked);
+   document.getElementById('rpsInstruction').textContent=d.my_choice?'Tanlov yuborildi. Raqibni kuting.':'Siz '+(d.player===1?'1':'2')+'-o‘yinchisiz. Tanlovingizni bosing.';
+  }
+ }catch(e){stopRPSPoll();document.getElementById('rpsInstruction').textContent=e.message||'Aloqa uzildi'}
+}
+async function pickRPS(choice){
+ if(rpsMode==='online'){
+  if(rpsOnlineLocked||!rpsRoom)return;rpsOnlineLocked=true;
+  document.querySelectorAll('#rpsPlay .grid button').forEach(b=>b.disabled=true);
+  try{
+   const r=await fetch('/api/rps/move',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData,room_id:rpsRoom,choice})});
+   const d=await r.json();if(!r.ok)throw new Error(d.error||'Tanlov yuborilmadi');
+   await pollOnlineRPS();
+  }catch(e){rpsOnlineLocked=false;toast(e.message||'Xatolik')}
+  return;
+ }
+ if(rpsLocked)return;if(rpsMode==='friend'&&!rpsFirst){rpsFirst=choice;rpsLocked=true;document.getElementById('rpsInstruction').textContent='Tanlov yashirildi. Telefonni do‘stingizga bering.';document.querySelectorAll('#rpsPlay .grid button').forEach(b=>b.disabled=true);setTimeout(()=>{document.getElementById('rpsInstruction').textContent='Endi 2-o‘yinchi tanlasin';document.querySelectorAll('#rpsPlay .grid button').forEach(b=>b.disabled=false);rpsLocked=false},1000);return}const other=rpsMode==='bot'?['rock','paper','scissors'][Math.floor(Math.random()*3)]:rpsFirst;const a=rpsMode==='bot'?choice:rpsFirst,b=rpsMode==='bot'?other:choice,w=rpsWinner(a,b);if(w===1)rpsScoreA++;else if(w===2)rpsScoreB++;document.getElementById('rpsChoices').textContent=(rpsMode==='bot'?'Siz: ':'1-o‘yinchi: ')+rpsNames[a]+'  |  '+(rpsMode==='bot'?'Kompyuter: ':'2-o‘yinchi: ')+rpsNames[b];document.getElementById('rpsOutcome').textContent=w===0?'Durang!':w===1?(rpsMode==='bot'?'Siz yutdingiz!':'1-o‘yinchi yutdi!'):(rpsMode==='bot'?'Kompyuter yutdi!':'2-o‘yinchi yutdi!');document.getElementById('rpsResult').style.display='block';rpsTurn++;rpsFirst='';document.getElementById('rpsInstruction').textContent=rpsMode==='bot'?'Yana tanlov qiling':'Yangi raund: 1-o‘yinchi tanlasin';updateRPSScore()}
+
 
 const tg=window.Telegram?.WebApp; if(tg){tg.ready();tg.expand();try{tg.setHeaderColor('#080b18');tg.setBackgroundColor('#080b18');tg.BackButton?.onClick(goHome);tg.BackButton?.hide()}catch(e){}const u=tg.initDataUnsafe?.user;if(u){document.getElementById('hello').textContent=u.first_name||'do‘stim';document.getElementById('username').textContent='@'+(u.username||'telegram');document.getElementById('profileName').textContent=((u.first_name||'')+' '+(u.last_name||'')).trim()||'Telegram foydalanuvchisi';document.getElementById('profileId').textContent=String(u.id||'—');}loadAccount();}
 function openPage(id){if(id!=='xo')stopXOPoll();if(id!=='checkers')stopCKPoll();document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(id)?.classList.add('active');const activeTab=id==='services'?'services':id==='games'?'games':id==='profile'?'profile':'home';document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('sel',b.dataset.tab===activeTab));if(id==='orders')loadOrders();if(id==='profile')loadAccount();if(tg?.BackButton){if(id==='home')tg.BackButton.hide();else tg.BackButton.show()}if(tg?.HapticFeedback)tg.HapticFeedback.selectionChanged();window.scrollTo({top:0,behavior:'smooth'})}
