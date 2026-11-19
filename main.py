@@ -691,6 +691,103 @@ async def show_user_orders(message: Message):
     await message.answer("\n\n".join(lines))
 
 
+def transition_order_status(order_id, status):
+    """Move an order from pending exactly once; return (user_id, result)."""
+    if status not in ("approved", "rejected"):
+        raise ValueError("Noto‘g‘ri buyurtma holati")
+    con = db()
+    try:
+        cur = con.cursor()
+        cur.execute("BEGIN IMMEDIATE")
+        cur.execute("SELECT user_id, status FROM orders WHERE id=?", (order_id,))
+        row = cur.fetchone()
+        if not row:
+            con.rollback()
+            return None, "not_found"
+        user_id, current_status = row
+        if current_status != "pending":
+            con.rollback()
+            return user_id, "already_processed"
+        cur.execute(
+            "UPDATE orders SET status=? WHERE id=? AND status='pending'",
+            (status, order_id)
+        )
+        if cur.rowcount != 1:
+            con.rollback()
+            return user_id, "already_processed"
+        con.commit()
+        return user_id, "updated"
+    except sqlite3.Error:
+        con.rollback()
+        raise
+    finally:
+        con.close()
+
+
+@dp.message(Command("stats"))
+async def admin_stats(message: Message):
+    if message.from_user.id != ADMIN_ID or ADMIN_ID == 0:
+        return
+    today = datetime.now(ZoneInfo("Asia/Tashkent")).date().isoformat()
+    con = db()
+    try:
+        cur = con.cursor()
+        cur.execute("SELECT COUNT(*), COALESCE(SUM(balance), 0) FROM users")
+        users_count, total_balance = cur.fetchone()
+        cur.execute("SELECT status, COUNT(*) FROM orders GROUP BY status")
+        order_counts = dict(cur.fetchall())
+        cur.execute("SELECT COUNT(*) FROM orders")
+        orders_count = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM daily_bonus_claims WHERE claim_date=?", (today,))
+        daily_claims = cur.fetchone()[0]
+        cur.execute("SELECT COALESCE(SUM(used_count), 0) FROM promo_codes")
+        promo_uses = cur.fetchone()[0]
+    finally:
+        con.close()
+    await message.answer(
+        "📊 <b>iDonat — boshqaruv statistikasi</b>\n\n"
+        f"👥 Foydalanuvchilar: <b>{users_count:,}</b>\n"
+        f"💰 Virtual balanslar yig‘indisi: <b>{total_balance:,} so‘m</b>\n"
+        f"📦 Jami buyurtmalar: <b>{orders_count:,}</b>\n"
+        f"⏳ Kutilmoqda: <b>{order_counts.get('pending', 0)}</b>\n"
+        f"✅ Tasdiqlangan: <b>{order_counts.get('approved', 0)}</b>\n"
+        f"❌ Rad etilgan: <b>{order_counts.get('rejected', 0)}</b>\n"
+        f"🎁 Bugungi bonuslar: <b>{daily_claims}</b>\n"
+        f"🎟 Promokod ishlatilishi: <b>{promo_uses}</b>"
+    )
+
+
+@dp.message(Command("pending"))
+async def admin_pending_orders(message: Message):
+    if message.from_user.id != ADMIN_ID or ADMIN_ID == 0:
+        return
+    con = db()
+    try:
+        cur = con.cursor()
+        cur.execute(
+            "SELECT id, user_id, service, details, created_at FROM orders "
+            "WHERE status='pending' ORDER BY id DESC LIMIT 15"
+        )
+        rows = cur.fetchall()
+    finally:
+        con.close()
+    if not rows:
+        await message.answer("✅ Hozircha kutilayotgan buyurtma yo‘q.")
+        return
+    lines = ["⏳ <b>Kutilayotgan buyurtmalar</b>", ""]
+    for order_id, user_id, service, details, created_at in rows:
+        safe_details = html.escape(details[:180])
+        if len(details) > 180:
+            safe_details += "…"
+        lines.append(
+            f"<b>#{order_id}</b> · <code>{user_id}</code>\n"
+            f"{html.escape(service)}\n{safe_details}\n"
+            f"<i>{html.escape(created_at)}</i>\n"
+            f"/orderstatus {order_id} approved  |  /orderstatus {order_id} rejected"
+        )
+    await message.answer("\n\n".join(lines))
+
+
 @dp.message(Command("orderstatus"))
 async def order_status_admin(message: Message):
     if message.from_user.id != ADMIN_ID or ADMIN_ID == 0:
@@ -705,23 +802,24 @@ async def order_status_admin(message: Message):
         return
     order_id = int(parts[1])
     status = parts[2]
-    con = db()
-    cur = con.cursor()
-    cur.execute("SELECT user_id FROM orders WHERE id=?", (order_id,))
-    row = cur.fetchone()
-    if not row:
-        con.close()
+    try:
+        user_id, result = transition_order_status(order_id, status)
+    except sqlite3.Error as exc:
+        print(f"Buyurtma holatini yangilash xatosi: {exc}")
+        await message.answer("❌ Bazada xatolik. Keyinroq urinib ko‘ring.")
+        return
+    if result == "not_found":
         await message.answer("Bunday buyurtma topilmadi.")
         return
-    cur.execute("UPDATE orders SET status=? WHERE id=?", (status, order_id))
-    con.commit()
-    con.close()
+    if result == "already_processed":
+        await message.answer("ℹ️ Bu buyurtma avval ko‘rib chiqilgan. Holat qayta o‘zgartirilmadi.")
+        return
     label = "tasdiqlandi" if status == "approved" else "rad etildi"
     try:
-        await bot.send_message(row[0], f"📦 <b>#{order_id}</b> buyurtmangiz {label}.")
-    except Exception:
-        pass
-    await message.answer(f"Buyurtma #{order_id} holati yangilandi: {label}.")
+        await bot.send_message(user_id, f"📦 <b>#{order_id}</b> buyurtmangiz {label}.")
+    except Exception as exc:
+        print(f"Buyurtma holati haqida foydalanuvchiga xabar yuborilmadi: {exc}")
+    await message.answer(f"✅ Buyurtma #{order_id} holati yangilandi: {label}.")
 
 
 @dp.message(F.text.in_([BOT_TEXT[l]["help"] for l in BOT_TEXT]))
