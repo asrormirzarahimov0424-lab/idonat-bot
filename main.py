@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from urllib.parse import parse_qsl
 from pathlib import Path
-from aiohttp import web
+from aiohttp import ClientSession, ClientTimeout, web
 
 from aiogram import Bot, Dispatcher, F, BaseMiddleware
 from aiogram.filters import CommandStart, Command
@@ -884,6 +884,36 @@ async def admin_balance_history(message: Message):
                 f"<code>{html.escape(reference)}</code>"
             )
     await message.answer("\n\n".join(lines))
+
+
+@dp.message(Command("yupaycheck"))
+async def admin_yupay_check(message: Message):
+    if message.from_user.id != ADMIN_ID or ADMIN_ID == 0:
+        return
+
+    api_key = os.getenv("YUPAY_API_KEY", "").strip()
+    if not api_key:
+        await message.answer("❌ YUPAY_API_KEY topilmadi. Railway Variables bo‘limini tekshiring.")
+        return
+
+    timeout = ClientTimeout(total=15, connect=5)
+    headers = {"Authorization": f"Bearer {api_key}", "Accept": "application/json"}
+    try:
+        async with ClientSession(timeout=timeout) as session:
+            async with session.get("https://api.yupay.uz/merchant/v1/me", headers=headers) as response:
+                if response.status == 200:
+                    await message.answer("✅ YuPay API kaliti ishlayapti. Hisob bilan xavfsiz ulanish tasdiqlandi.\n\nℹ️ Bu faqat tekshiruv: buyurtma berilmadi va mablag‘ yechilmadi.")
+                elif response.status in (401, 403):
+                    await message.answer("❌ YuPay kaliti qabul qilinmadi. Railway Variables’dagi YUPAY_API_KEY qiymatini tekshiring.")
+                elif response.status == 429:
+                    await message.answer("⏳ YuPay so‘rovlarni vaqtincha chekladi. Birozdan keyin qayta urinib ko‘ring.")
+                else:
+                    await message.answer(f"⚠️ YuPay tekshiruvi yakunlanmadi (HTTP {response.status}). Buyurtma berilmadi, mablag‘ yechilmadi.")
+    except asyncio.TimeoutError:
+        await message.answer("⏳ YuPay javobi kechikdi. Keyinroq qayta tekshiring.")
+    except Exception as exc:
+        print(f"YuPay xavfsiz tekshiruv xatosi: {type(exc).__name__}")
+        await message.answer("⚠️ YuPay bilan ulanishda xatolik yuz berdi. Kalit chatga chiqarilmadi; keyinroq qayta urinib ko‘ring.")
 
 
 @dp.message(Command("stats"))
