@@ -9,6 +9,7 @@ import hashlib
 import json
 import re
 import time
+import tempfile
 import uuid
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -25,7 +26,8 @@ from aiogram.types import (
     KeyboardButton,
     WebAppInfo,
     InlineKeyboardMarkup,
-    InlineKeyboardButton
+    InlineKeyboardButton,
+    FSInputFile
 )
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -809,6 +811,79 @@ def transition_order_status(order_id, status):
         raise
     finally:
         con.close()
+
+
+@dp.message(Command("backupdb"))
+async def admin_backup_database(message: Message):
+    if message.from_user.id != ADMIN_ID or ADMIN_ID == 0:
+        return
+    backup_path = None
+    source = None
+    try:
+        fd, backup_path = tempfile.mkstemp(prefix="idonat-backup-", suffix=".sqlite3")
+        os.close(fd)
+        source = sqlite3.connect(DB_NAME, timeout=20)
+        target = sqlite3.connect(backup_path)
+        try:
+            source.backup(target)
+        finally:
+            target.close()
+            source.close()
+            source = None
+        stamp = datetime.now(ZoneInfo("Asia/Tashkent")).strftime("%Y%m%d-%H%M%S")
+        await message.answer_document(
+            FSInputFile(backup_path, filename=f"idonat-backup-{stamp}.sqlite3"),
+            caption="🛡️ iDonat ma’lumotlar bazasining zaxira nusxasi. Uni xavfsiz joyda saqlang."
+        )
+    except Exception as exc:
+        print(f"Database backup failed: {exc}")
+        await message.answer("❌ Zaxira nusxasini yaratib bo‘lmadi. Server jurnalini tekshiring.")
+    finally:
+        if source is not None:
+            source.close()
+        if backup_path and os.path.exists(backup_path):
+            os.remove(backup_path)
+
+
+@dp.message(Command("balancehistory"))
+async def admin_balance_history(message: Message):
+    if message.from_user.id != ADMIN_ID or ADMIN_ID == 0:
+        return
+    parts = message.text.split()
+    if len(parts) != 2 or not parts[1].isdigit():
+        await message.answer("Foydalanish: /balancehistory USER_ID")
+        return
+    user_id = int(parts[1])
+    con = db()
+    try:
+        rows = con.execute(
+            "SELECT amount, balance_after, reason, reference, created_at "
+            "FROM balance_ledger WHERE user_id=? ORDER BY id DESC LIMIT 15",
+            (user_id,)
+        ).fetchall()
+        account = con.execute(
+            "SELECT balance FROM users WHERE user_id=?", (user_id,)
+        ).fetchone()
+    finally:
+        con.close()
+    if not account:
+        await message.answer("Bunday foydalanuvchi topilmadi.")
+        return
+    lines = [
+        f"💳 <b>Balans tarixi</b> · <code>{user_id}</code>",
+        f"Joriy balans: <b>{account[0]:,} so‘m</b>",
+        ""
+    ]
+    if not rows:
+        lines.append("Hozircha yangi audit yozuvlari yo‘q.")
+    else:
+        for amount, balance_after, reason, reference, created_at in rows:
+            lines.append(
+                f"➕ {amount:,} so‘m · {html.escape(reason)}\n"
+                f"Balans: {balance_after:,} · {html.escape(created_at)}\n"
+                f"<code>{html.escape(reference)}</code>"
+            )
+    await message.answer("\n\n".join(lines))
 
 
 @dp.message(Command("stats"))
