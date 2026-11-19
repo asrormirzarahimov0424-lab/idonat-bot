@@ -44,7 +44,13 @@ function audioBeat(){
  idStep++;
 }
 async function audioToggle(){
- if(IDONAT_TRACKS[idTrack]?.appleMusic){const tr=IDONAT_TRACKS[idTrack],st=document.getElementById('audioState');if(st)st.textContent='Apple Music sahifasini ochish uchun pastdagi havolani bosing';try{if(tg?.openLink){tg.openLink(tr.openUrl);return}}catch(err){console.warn('Telegram openLink:',err)}const opened=window.open(tr.openUrl,'_blank','noopener');if(!opened&&st)st.textContent='Ochilmasa, pastdagi “Apple Musicda ochish” havolasini bosing';return}
+ if(IDONAT_TRACKS[idTrack]?.appleMusic){
+  const dock=document.getElementById('audioDock'),player=document.getElementById('audioYoutubePlayer'),st=document.getElementById('audioState'),collapse=document.getElementById('audioCollapse');
+  if(dock?.classList.contains('compact')){dock.classList.remove('compact');if(collapse){collapse.textContent='⌄';collapse.setAttribute('aria-label','Pleyerni yig‘ish')}}
+  if(player){player.style.display='block';player.scrollIntoView({behavior:'smooth',block:'center'});const frame=player.querySelector('iframe');if(frame){frame.setAttribute('loading','eager');frame.focus()}}
+  if(st)st.textContent='Mini App ichidagi Apple Music oynasida ▶ tugmasini bosing. Avtomatik ijro brauzer tomonidan cheklanishi mumkin.';
+  return;
+ }
  if(idPlaying){audioPause();return}
  const state=document.getElementById('audioState'),button=document.getElementById('audioPlay');
  try{
@@ -71,7 +77,7 @@ function audioSelectTrack(key){
  if(!IDONAT_TRACKS[key])return;const was=idPlaying;audioPause();idTrack=key;idStep=0;
  const track=IDONAT_TRACKS[key],player=document.getElementById('audioYoutubePlayer');
  document.getElementById('audioTrack').value=key;document.getElementById('audioTrackName').textContent=track.name;
- if(player){player.style.display=track.appleMusic?'block':'none';player.innerHTML=track.appleMusic?'<iframe title="Mariah Carey — All I Want for Christmas Is You (New Dance Mix Extended 2009)" width="100%" height="175" src="'+track.appleMusic+'" allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write" frameborder="0" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" style="border:0;border-radius:12px;overflow:hidden;background:transparent"></iframe>':''}
+ if(player){player.style.display=track.appleMusic?'block':'none';player.innerHTML=track.appleMusic?'<iframe title="Mariah Carey — All I Want for Christmas Is You (New Dance Mix Extended 2009)" width="100%" height="175" src="'+track.appleMusic+'" allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write" frameborder="0" loading="eager" referrerpolicy="strict-origin-when-cross-origin" style="border:0;border-radius:12px;overflow:hidden;background:transparent"></iframe>':''}
  try{localStorage.setItem('idonat_audio_track',key)}catch(e){}
  if(track.appleMusic){document.getElementById('audioState').textContent='▶ bosing yoki pastdagi rasmiy havolani oching';return}
  if(was)audioToggle();else document.getElementById('audioState').textContent='Tanlandi · Ijro etish uchun ▶ bosing'
