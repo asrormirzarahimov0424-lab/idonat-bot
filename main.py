@@ -8,7 +8,7 @@ import hashlib
 import json
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from urllib.parse import parse_qsl
 from pathlib import Path
@@ -985,25 +985,61 @@ async def api_create_order(request):
         payload = await request.json()
     except Exception:
         return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+    if not isinstance(payload, dict):
+        return web.json_response({"error": "So‘rov formati noto‘g‘ri"}, status=400)
     telegram_user = validate_webapp_init_data(payload.get("initData", ""))
     if not telegram_user:
         return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
-    service = str(payload.get("service", "")).strip()[:80]
-    details = str(payload.get("details", "")).strip()[:500]
-    if not service or not details:
-        return web.json_response({"error": "Xizmat va buyurtma ma’lumotlarini kiriting"}, status=400)
+
+    # Accept only services actually displayed in the Mini App.
+    allowed_services = {
+        "Telegram nakrutka", "Telegram Stars", "Telegram Premium",
+        "PUBG UC", "Virtual raqamlar"
+    }
+    service = str(payload.get("service", "")).strip()
+    details = str(payload.get("details", "")).strip()
+    if service not in allowed_services or not details or len(details) > 500:
+        return web.json_response(
+            {"error": "Xizmatni tanlang va ma’lumotni 500 belgidan oshirmang"},
+            status=400
+        )
+
     user_id = int(telegram_user["id"])
+    now = datetime.now(ZoneInfo("Asia/Tashkent"))
+    created_at = now.isoformat(timespec="seconds")
+    cutoff = (now - timedelta(seconds=60)).isoformat(timespec="seconds")
     con = db()
     cur = con.cursor()
-    cur.execute("INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)",
-                (user_id, telegram_user.get("username", "") or ""))
-    cur.execute(
-        "INSERT INTO orders (user_id, service, details, status, created_at) VALUES (?, ?, ?, 'pending', ?)",
-        (user_id, service, details, datetime.now(ZoneInfo("Asia/Tashkent")).isoformat(timespec="minutes"))
-    )
-    order_id = cur.lastrowid
-    con.commit()
-    con.close()
+    try:
+        # Serialize the limit check and insert so parallel requests cannot bypass it.
+        cur.execute("BEGIN IMMEDIATE")
+        cur.execute(
+            "SELECT COUNT(*) FROM orders WHERE user_id=? AND created_at>=?",
+            (user_id, cutoff)
+        )
+        if cur.fetchone()[0] >= 5:
+            con.rollback()
+            return web.json_response(
+                {"error": "Bir daqiqada ko‘pi bilan 5 ta buyurtma yuborish mumkin."},
+                status=429
+            )
+        cur.execute(
+            "INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)",
+            (user_id, telegram_user.get("username", "") or "")
+        )
+        cur.execute(
+            "INSERT INTO orders (user_id, service, details, status, created_at) "
+            "VALUES (?, ?, ?, 'pending', ?)",
+            (user_id, service, details, created_at)
+        )
+        order_id = cur.lastrowid
+        con.commit()
+    except sqlite3.Error:
+        con.rollback()
+        return web.json_response({"error": "Buyurtmani saqlab bo‘lmadi"}, status=500)
+    finally:
+        con.close()
+
     if ADMIN_ID:
         try:
             await bot.send_message(
@@ -1012,8 +1048,9 @@ async def api_create_order(request):
                 f"Foydalanuvchi: <code>{user_id}</code>\n"
                 f"Xizmat: {html.escape(service)}\nMa’lumot: {html.escape(details)}"
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            # The order remains safely stored even if the notification cannot be delivered.
+            print(f"Admin buyurtma xabari yuborilmadi: {exc}")
     return web.json_response({"ok": True, "order_id": order_id, "status": "pending"})
 
 
