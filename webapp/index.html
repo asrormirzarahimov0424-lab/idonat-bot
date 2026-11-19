@@ -319,11 +319,11 @@ button{
 <section id="games" class="page"><button class="back" onclick="goHome()">← Orqaga</button><h2>🎮 O‘yinlar</h2><div class="grid"><button class="tile" onclick="openPage('checkers')">♟️<br>Shashka</button><button class="tile" onclick="openPage('xo')">❌⭕<br>X-O</button><button class="tile" onclick="openPage('rps')">🪨📄✂️<br>Tosh-qaychi-qog‘oz</button><button class="tile" onclick="openPage('agar')"><span class="emoji">🟢</span>Agar.io</button><button class="tile" onclick="openPage('chess')"><span class="emoji">♟️</span>Shahmat</button></div></section>
 
 <section id="agar" class="page"><button class="back" onclick="stopAgar();openPage('games')">← O‘yinlar</button><h2>🟢 Agar.io</h2><div class="panel"><div class="agar-hud"><span id="agarScore">Massa: 10</span><span id="agarRank">Raqiblar: 10</span></div><canvas id="agarCanvas" width="720" height="520" aria-label="Agar.io o‘yini"></canvas><p class="agar-help" id="agarStatus">Sharni barmog‘ingiz bilan kerakli tomonga boshqaring. Nuqtalarni yig‘ing va kichik raqiblarni yuting!</p><button class="primary" id="agarStart" style="width:100%;margin-top:12px" onclick="startAgar()">▶ O‘yinni boshlash</button></div></section>
-<section id="rps" class="page"><button class="back" onclick="openPage('games')">← O‘yinlar</button><h2>🪨📄✂️ Tosh–qaychi–qog‘oz</h2><div class="panel" id="rpsModes"><b>O‘yin turini tanlang</b><div class="list" style="margin-top:12px"><button class="primary" onclick="startRPS('bot')">🤖 Kompyuter bilan</button><button onclick="startOnlineRPS()">🌐 Do‘st bilan (onlayn)</button></div></div><div class="panel" id="rpsOnlinePanel" style="display:none"><div class="muted" id="rpsRoomCode"></div></div><div class="panel" id="rpsPlay" style="display:none"><div class="row"><b id="rpsRoundTitle">1-raund</b><span class="tag" id="rpsModeLabel">Kompyuter</span></div><p class="muted" id="rpsInstruction">Tanlovingizni bosing</p><div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr));margin:14px 0"><button class="tile" onclick="pickRPS('rock')"><span class="emoji">🪨</span>Tosh</button><button class="tile" onclick="pickRPS('paper')"><span class="emoji">📄</span>Qog‘oz</button><button class="tile" onclick="pickRPS('scissors')"><span class="emoji">✂️</span>Qaychi</button></div><div class="panel" id="rpsResult" style="display:none;text-align:center"><div class="muted" id="rpsChoices"></div><h3 id="rpsOutcome"></h3></div><div class="row"><span id="rpsScore">Siz 0 : 0 Raqib</span><button onclick="resetRPS()">Qayta boshlash</button></div><button style="width:100%;margin-top:10px" onclick="showRPSModes()">Rejimni almashtirish</button></div></section>
+<section id="rps" class="page"><button class="back" onclick="openPage('games')">← O‘yinlar</button><h2>🪨📄✂️ Tosh–qaychi–qog‘oz</h2><div class="panel" id="rpsModes"><b>O‘yin turini tanlang</b><div class="list" style="margin-top:12px"><button class="primary" onclick="startRPS('bot')">🤖 Kompyuter bilan</button><button onclick="startOnlineRPS()">🌐 Do‘st bilan (onlayn)</button></div></div><div class="panel" id="rpsOnlinePanel" style="display:none"><div class="muted" id="rpsRoomCode"></div><label class="muted" for="rpsJoinCode">Do‘stingiz yuborgan xona kodi</label><input class="input" id="rpsJoinCode" maxlength="12" placeholder="XONA KODI" autocomplete="off"><button style="width:100%;margin-top:8px" onclick="joinOnlineRPS()">🔗 Kod orqali qo‘shilish</button></div><div class="panel" id="rpsPlay" style="display:none"><div class="row"><b id="rpsRoundTitle">1-raund</b><span class="tag" id="rpsModeLabel">Kompyuter</span></div><p class="muted" id="rpsInstruction">Tanlovingizni bosing</p><div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr));margin:14px 0"><button class="tile" onclick="pickRPS('rock')"><span class="emoji">🪨</span>Tosh</button><button class="tile" onclick="pickRPS('paper')"><span class="emoji">📄</span>Qog‘oz</button><button class="tile" onclick="pickRPS('scissors')"><span class="emoji">✂️</span>Qaychi</button></div><div class="panel" id="rpsResult" style="display:none;text-align:center"><div class="muted" id="rpsChoices"></div><h3 id="rpsOutcome"></h3></div><div class="row"><span id="rpsScore">Siz 0 : 0 Raqib</span><button onclick="resetRPS()">Qayta boshlash</button></div><button style="width:100%;margin-top:10px" onclick="showRPSModes()">Rejimni almashtirish</button></div></section>
 <section id="checkers" class="page"><button class="back" onclick="openPage('games')">← O‘yinlar</button><h2>♟️ Shashka</h2>
 <div class="panel" id="ckModes"><b>O‘yin turini tanlang</b><div class="list" style="margin-top:12px"><button class="primary" onclick="startOnlineCK()">👥 Odam bilan (onlayn)</button><button onclick="showAICK()">🤖 Kompyuter bilan</button></div></div>
 <div class="panel" id="ckAISettings" style="display:none"><b>Kompyuter qiyinligi</b><select class="input" id="ckDifficulty"><option value="1">1 — Juda oson</option><option value="2">2 — Oson</option><option value="3" selected>3 — O‘rtacha</option><option value="4">4 — Qiyin</option><option value="5">5 — Eng qiyin</option></select><button class="primary" onclick="startAICK()">O‘yinni boshlash</button></div>
-<div class="panel" id="ckOnlinePanel" style="display:none"><div class="muted" id="ckOnlineStatus">Raqib qidirilmoqda...</div><div class="muted" id="ckRoomCode"></div></div>
+<div class="panel" id="ckOnlinePanel" style="display:none"><div class="muted" id="ckOnlineStatus">Xona yaratilyapti...</div><div class="muted" id="ckRoomCode"></div></div>
 <div class="panel" id="ckBoardPanel" style="display:none"><div class="muted" id="ckStatus">Oq donalar yuradi</div><div class="checker" id="checker"></div><button class="primary" onclick="resetCK()">Yangi o‘yin</button><button style="margin-left:6px" onclick="backCKOptions()">Rejimni almashtirish</button></div></section>
 <section id="xo" class="page"><button class="back" onclick="openPage('games')">← O‘yinlar</button><h2>❌⭕ X-O</h2>
 <div class="panel" id="xoModes"><b>O‘yin turini tanlang</b><div class="list" style="margin-top:12px"><button class="primary" onclick="startOnlineXO()">👥 Odam bilan (onlayn)</button><button onclick="showAIMode()">🤖 Kompyuter bilan</button></div></div>
@@ -431,6 +431,20 @@ async function startOnlineRPS(){
   await pollOnlineRPS();rpsPoll=setInterval(pollOnlineRPS,1200);
  }catch(e){document.getElementById('rpsInstruction').textContent=e.message||'Server bilan aloqa yo‘q'}
 }
+async function joinOnlineRPS(){
+ if(!tg?.initData){toast('Telegram ichidagi Mini App orqali oching');return}
+ const code=document.getElementById('rpsJoinCode').value.trim().toUpperCase();
+ if(!/^[A-F0-9]{8}$/.test(code)){toast('8 belgili xona kodini kiriting');return}
+ stopRPSPoll();
+ try{
+  const r=await fetch('/api/rps/queue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData,room_id:code})});
+  const d=await r.json();if(!r.ok)throw new Error(d.error||'Xonaga ulanib bo‘lmadi');
+  rpsRoom=d.room_id;rpsPlayer=d.player;
+  document.getElementById('rpsRoomCode').textContent='Xona: '+rpsRoom+' · Do‘stingiz bilan bog‘landingiz';
+  document.getElementById('rpsJoinCode').value='';
+  await pollOnlineRPS();rpsPoll=setInterval(pollOnlineRPS,1200);
+ }catch(e){toast(e.message||'Xatolik')}
+}
 async function pollOnlineRPS(){
  if(!rpsRoom||!tg?.initData)return;
  try{
@@ -440,7 +454,7 @@ async function pollOnlineRPS(){
   document.getElementById('rpsRoundTitle').textContent='Raund '+d.round;
   document.getElementById('rpsScore').textContent='1-o‘yinchi '+d.score_a+' : '+d.score_b+' 2-o‘yinchi';
   const buttons=document.querySelectorAll('#rpsPlay .grid button');
-  if(!d.opponent_connected){document.getElementById('rpsInstruction').textContent='Raqib kutilmoqda. Do‘stingiz ham shu Mini App’da onlayn o‘yinni bosing.';buttons.forEach(b=>b.disabled=true);return}
+  if(!d.opponent_connected){document.getElementById('rpsInstruction').textContent='Raqib kutilmoqda. Xona kodini do‘stingizga yuboring. U kod orqali qo‘shilsin.';buttons.forEach(b=>b.disabled=true);return}
   if(d.resolved){
    buttons.forEach(b=>b.disabled=false);
    const a=d.player===1?d.my_choice:d.opponent_choice,b=d.player===1?d.opponent_choice:d.my_choice;
