@@ -2065,6 +2065,51 @@ def checkers_legal_boards(board, side):
     return results
 
 
+async def api_checkers_resign(request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+
+    user = validate_webapp_init_data(payload.get("initData", ""))
+    if not user:
+        return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
+
+    room_id = str(payload.get("room_id", ""))[:20]
+    con = db()
+    cur = con.cursor()
+    try:
+        cur.execute("BEGIN IMMEDIATE")
+        cur.execute(
+            "SELECT player_x, player_o, status FROM checkers_rooms WHERE room_id=?",
+            (room_id,)
+        )
+        row = cur.fetchone()
+        if not row or int(user["id"]) not in (row[0], row[1]):
+            con.rollback()
+            return web.json_response({"error": "O‘yin xonasi topilmadi"}, status=404)
+        player_x, player_o, status = row
+        if status != "playing" or player_o is None:
+            con.rollback()
+            return web.json_response({"error": "Bu o‘yinda taslim bo‘lish mumkin emas"}, status=409)
+        winner = "O" if int(user["id"]) == player_x else "X"
+        cur.execute(
+            "UPDATE checkers_rooms SET status='finished', winner=?, updated_at=? "
+            "WHERE room_id=? AND status='playing'",
+            (winner, time.time(), room_id)
+        )
+        if cur.rowcount != 1:
+            con.rollback()
+            return web.json_response({"error": "O‘yin holati o‘zgargan. Qayta tekshiring."}, status=409)
+        con.commit()
+        return web.json_response({"ok": True, "status": "finished", "winner": winner})
+    except sqlite3.Error:
+        con.rollback()
+        return web.json_response({"error": "Taslim bo‘lishni saqlab bo‘lmadi"}, status=500)
+    finally:
+        con.close()
+
+
 async def api_checkers_move(request):
     try:
         payload = await request.json()
@@ -2184,6 +2229,7 @@ async def start_web_server():
     app.router.add_post("/api/checkers/queue", api_checkers_queue)
     app.router.add_post("/api/checkers/state", api_checkers_state)
     app.router.add_post("/api/checkers/move", api_checkers_move)
+    app.router.add_post("/api/checkers/resign", api_checkers_resign)
     app.router.add_get("/health", lambda request: web.json_response({"ok": True, "app": "iDonat Robot"}))
     runner = web.AppRunner(app)
     await runner.setup()
