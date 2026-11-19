@@ -466,6 +466,56 @@ button.primary,.nav button.sel{
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
+
+/* Visual refinement: clean, balanced glass without the strange heavy overlays */
+:root{--glass-stroke:rgba(190,210,245,.16);--glass-shadow:0 8px 24px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.09)}
+html,body{background:var(--bg)!important}
+body{background:radial-gradient(ellipse at 50% -15%,#26366b 0,transparent 48%),radial-gradient(circle at 100% 35%,#24184a55,transparent 35%),var(--bg)!important}
+/* Remove decorative layers that made cards look busy */
+.hero:before,.panel:before,.tile:before{content:none!important;display:none!important}
+.hero,.panel,.tile,.item,.gift,.coming-soon,.status-note,.balance,
+.agar-hud span,#chessStatus,.ck-mode-panel,.ck-player,.ck-turn,.ck-back,.ck-actions button{
+ background:linear-gradient(145deg,rgba(31,46,73,.92),rgba(14,23,41,.96))!important;
+ border:1px solid var(--glass-stroke)!important;
+ box-shadow:var(--glass-shadow)!important;
+ border-radius:18px!important;
+}
+/* Keep the hero distinct, like a single polished glass panel */
+.hero{background:radial-gradient(ellipse at 100% 0,#3a4e9c66,transparent 55%),linear-gradient(145deg,rgba(31,48,80,.96),rgba(14,24,43,.98))!important;border-radius:23px!important}
+.panel{border-radius:20px!important}
+.tile{border-radius:18px!important}
+.item{border-radius:16px!important}
+.balance{background:rgba(8,19,38,.72)!important;border-radius:15px!important}
+button:not(.sq):not(#chessBoard button){
+ background:linear-gradient(145deg,#1a2945,#111a2e)!important;
+ border:1px solid #354766!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 4px 12px rgba(0,0,0,.16)!important;
+ -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+}
+button.primary,.nav button.sel{
+ background:linear-gradient(110deg,#28b9e9,#4778ff 58%,#8c62f5)!important;
+ border:0!important;color:#fff!important;
+ box-shadow:0 5px 14px rgba(52,125,255,.24),inset 0 1px 0 rgba(255,255,255,.28)!important;
+}
+.navin{
+ background:rgba(22,30,49,.94)!important;
+ border:1px solid rgba(180,205,245,.2)!important;
+ box-shadow:0 8px 24px #0007,inset 0 1px 0 #ffffff14!important;
+ -webkit-backdrop-filter:blur(12px) saturate(1.15)!important;
+ backdrop-filter:blur(12px) saturate(1.15)!important;
+}
+.nav button{background:transparent!important;border:0!important;box-shadow:none!important}
+.nav button.sel{background:linear-gradient(145deg,#367de8,#6258d9)!important}
+.input,#languageSelect,select,input,textarea{
+ background:rgba(9,20,38,.92)!important;border:1px solid #344765!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.04)!important;
+ -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+}
+.logo{box-shadow:0 5px 16px #387cff33,inset 0 1px 0 #ffffff55!important}
+.tag{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:#17334a!important}
+.page.active{animation:none!important}
+@media(hover:hover){.tile:hover,button:not(.sq):not(#chessBoard button):hover{filter:brightness(1.07)}}
+
 </style></head>
 <body><main class="wrap">
 <header class="top"><div class="brand"><div class="logo">🤖</div><div>iDonat Robot <span class="tag">BETA</span><div class="muted" id="username">Mini App</div></div></div><select id="languageSelect" aria-label="Language" onchange="changeLanguage(this.value)"><option value="uz">🇺🇿 UZ</option><option value="ru">🇷🇺 RU</option><option value="en">🇬🇧 EN</option></select></header>
