@@ -196,6 +196,112 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 @media(max-width:390px){.wrap{padding-top:12px}.hero{padding:20px 16px}.tile{min-height:104px}.nav button{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.tile{transition:none}}
 
+
+/* iDonat unified premium theme — Apple clarity + dark luxury + gaming accents */
+:root{
+ --bg:#090c12;--line:#293341;--muted:#9ba8b8;--text:#f3f5f8;
+ --cyan:#82d8e8;--gold:#d9bb76;
+}
+html,body{background:#090c12}
+body{
+ background:
+ radial-gradient(ellipse at 50% -18%,#1c2c40 0,transparent 48%),
+ radial-gradient(ellipse at 100% 48%,#16243144 0,transparent 38%),#090c12;
+ color:#f3f5f8;
+}
+.wrap{width:min(100%,650px);padding-left:17px;padding-right:17px}
+.top{padding:8px 2px 16px;margin-bottom:15px}
+.logo{
+ background:linear-gradient(145deg,#d9bb76,#8e7542 58%,#354b5c);
+ border:1px solid #f0dba477;box-shadow:0 7px 22px #0008,inset 0 1px 0 #fff8;
+}
+.tag{color:#e4d2a5;border-color:#74613b;background:#29251c}
+#languageSelect{background:#151b23;border-color:#35404c;color:#f1f3f5}
+.hero,.panel,.tile{
+ background:linear-gradient(155deg,#171e27,#11171f 78%);
+ border:1px solid #303b48;box-shadow:0 10px 26px #0005,inset 0 1px 0 #ffffff0a;
+}
+.hero{
+ border-color:#5b5139;
+ background:radial-gradient(ellipse at 100% 0,#8b74402c,transparent 55%),linear-gradient(145deg,#202832,#11171f 78%);
+ border-radius:23px;padding:22px 19px;
+}
+.hero:after{opacity:.10;filter:none}
+.hero h1{letter-spacing:-.7px}
+.balance{
+ background:#0b1119;border:1px solid #4a4638;border-radius:17px;
+ box-shadow:inset 0 1px 0 #ffffff08;
+}
+.amount{color:#e6c982}
+.primary{
+ background:linear-gradient(110deg,#c9a85f,#e0c783 58%,#a98b4d);
+ color:#17150f;border:1px solid #f0d99c66;
+ box-shadow:0 6px 18px #b3924930,inset 0 1px 0 #fff8;
+}
+button{
+ background:linear-gradient(145deg,#1c2631,#151c25);
+ border:1px solid #354353;border-radius:14px;
+}
+.section{color:#f1f3f5;letter-spacing:-.3px}
+.section:before{
+ background:linear-gradient(#e4c77e,#78cddd);box-shadow:0 0 10px #d5b86b33;
+}
+.tile{
+ min-height:112px;border-radius:18px;padding:14px 9px;
+ background:linear-gradient(155deg,#1a232d,#121922);
+ border-color:#303d49;box-shadow:0 7px 18px #0004,inset 0 1px 0 #ffffff08;
+}
+.tile:nth-child(3n+2){border-color:#303d49}
+.tile .emoji{filter:drop-shadow(0 2px 6px #0008)}
+.panel{border-radius:19px;padding:17px}
+.item{
+ background:linear-gradient(110deg,#1a242e,#141c25);
+ border:1px solid #303e4b;border-radius:15px;box-shadow:none;
+}
+.input{
+ background:#0d141c;border-color:#354353;color:#f4f5f7;border-radius:13px;
+}
+.input:focus{border-color:#b99a5c;box-shadow:0 0 0 3px #d1b46b1c}
+.nav{
+ background:linear-gradient(180deg,transparent,#070a0fbb);
+ padding-left:13px;padding-right:13px;
+}
+.navin{
+ width:min(540px,100%);background:rgba(16,22,29,.91);
+ border:1px solid #46515d99;border-radius:22px;
+ box-shadow:0 12px 34px #000b,inset 0 1px 0 #ffffff12;
+ backdrop-filter:blur(24px) saturate(1.25);
+ -webkit-backdrop-filter:blur(24px) saturate(1.25);
+}
+.nav button{color:#aab4bf;border-radius:15px}
+.nav button.sel{
+ color:#f4e5bd;background:linear-gradient(145deg,#4b422e,#29271f);
+ box-shadow:inset 0 0 0 1px #b69a5b66,0 3px 12px #0005;
+}
+.gift{
+ background:radial-gradient(ellipse at 50% 0,#5a4a2b55,transparent 60%),#151b23;
+ border:1px solid #665638;border-radius:19px;box-shadow:0 10px 25px #0006;
+}
+.gift .big{filter:drop-shadow(0 0 9px #d7b96a44)}
+.status-note,.coming-soon{
+ background:#141c25;border-color:#3b4856;border-radius:15px;
+}
+.agar-hud span{background:#141e29;border-color:#354657}
+#agarCanvas{border-color:#3b5263}
+#chessStatus{background:#141e29;border-color:#3b4856}
+@media(max-width:480px){
+ .wrap{padding-left:14px;padding-right:14px}
+ .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .tile{min-height:108px;font-size:13px}
+ .hero{padding:20px 16px}
+ .navin{padding:7px}
+ .nav button{min-height:50px}
+}
+@media(hover:hover){
+ .tile:hover{border-color:#8e794d;background:linear-gradient(145deg,#222b34,#171e27)}
+ .primary:hover{filter:brightness(1.06);box-shadow:0 8px 20px #c3a45c35}
+}
+
 </style></head>
 <body><main class="wrap">
 <header class="top"><div class="brand"><div class="logo">🤖</div><div>iDonat Robot <span class="tag">BETA</span><div class="muted" id="username">Mini App</div></div></div><select id="languageSelect" aria-label="Language" onchange="changeLanguage(this.value)"><option value="uz">🇺🇿 UZ</option><option value="ru">🇷🇺 RU</option><option value="en">🇬🇧 EN</option></select></header>
