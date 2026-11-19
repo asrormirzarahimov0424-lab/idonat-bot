@@ -8,14 +8,9 @@
 
 /* iDonat original WebAudio music and UI sound effects */
 const IDONAT_TRACKS={
- newyear:{name:'🎄 iDonat — Yangi yil sehri',tempo:104,wave:'sine',bell:true,notes:[523.25,659.25,783.99,659.25,587.33,698.46,880,783.99,659.25,587.33,523.25,392],bass:[130.81,130.81,174.61,196],chords:[[261.63,329.63,392],[196,246.94,293.66],[220,261.63,329.63],[174.61,220,261.63]]},
- pop:{name:'🎤 iDonat — Pop Vibes',tempo:116,wave:'triangle',notes:[392,440,523.25,587.33,523.25,440,392,329.63,392,523.25,587.33,659.25],bass:[98,110,130.81,87.31],chords:[[196,246.94,293.66],[220,261.63,329.63],[174.61,220,261.63],[196,246.94,293.66]]},
- chill:{name:'🌙 iDonat — Chill Waves',tempo:78,wave:'sine',notes:[293.66,349.23,392,440,392,349.23,293.66,261.63,293.66,392,440,392],bass:[73.42,87.31,98,82.41],chords:[[146.83,174.61,220],[130.81,164.81,196],[174.61,220,261.63],[146.83,174.61,220]]},
- neon:{name:'🎵 iDonat — Neon Pulse',tempo:112,wave:'triangle',notes:[220,261.63,329.63,392,329.63,261.63,196,261.63],bass:[110,110,130.81,98],chords:[[220,261.63,329.63],[196,246.94,293.66]]},
- arcade:{name:'⚡ iDonat — Arcade Energy',tempo:128,wave:'triangle',notes:[261.63,329.63,392,523.25,392,329.63,293.66,440],bass:[130.81,164.81,196,146.83],chords:[[261.63,329.63,392],[196,246.94,293.66]]},
  mariah_dance:{name:'🎄 Mariah Carey — New Dance Mix',youtube:'MorJvNUDt6M'}
 };
-let idAudioCtx=null,idMaster=null,idMusicTimer=null,idStep=0,idTrack='neon',idPlaying=false,idSfx=true,idVolume=0.8;
+let idAudioCtx=null,idMaster=null,idMusicTimer=null,idStep=0,idTrack='mariah_dance',idPlaying=false,idSfx=true,idVolume=0.8;
 async function audioInit(){
  const AC=window.AudioContext||window.webkitAudioContext;
  if(!AC)throw new Error('AudioContext qo‘llab-quvvatlanmaydi');
@@ -261,7 +256,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
   </div>
  </div>
  <div class="audio-bottom">
-  <select id="audioTrack" aria-label="Musiqa tanlash" onchange="audioSelectTrack(this.value)"><option value="newyear">🎄 Yangi yil sehri</option><option value="pop">🎤 Pop Vibes</option><option value="chill">🌙 Chill Waves</option><option value="neon">Neon Pulse</option><option value="arcade">Arcade Energy</option><option value="mariah_dance">🎄 Mariah Carey · New Dance Mix</option></select>
+  <select id="audioTrack" aria-label="Musiqa tanlash" onchange="audioSelectTrack(this.value)"><option value="mariah_dance">🎄 Mariah Carey · New Dance Mix</option></select>
   <label>VOL <input id="audioVolume" type="range" min="0" max="100" value="35" oninput="audioSetVolume(this.value)"></label>
  </div>
  <div id="audioYoutubePlayer" style="display:none;margin-top:8px;border-radius:12px;overflow:hidden"></div>
