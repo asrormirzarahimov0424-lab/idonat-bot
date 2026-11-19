@@ -169,6 +169,14 @@ def init_db():
             referral_rewarded INTEGER DEFAULT 1
         )
     """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS app_presence (
+            user_id INTEGER PRIMARY KEY,
+            last_seen REAL NOT NULL
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_app_presence_last_seen ON app_presence(last_seen)")
     cur.execute("PRAGMA table_info(users)")
     columns = {row[1] for row in cur.fetchall()}
     if "language" not in columns:
@@ -993,12 +1001,45 @@ async def api_me(request):
         "balance": account[0] if account else 0,
         "referrals": account[1] if account else 0,
         "points": account[2] if account else 0,
+        "level": (1 if (account[2] if account else 0) < 100 else 2 if (account[2] if account else 0) < 300 else 3 if (account[2] if account else 0) < 700 else 4 if (account[2] if account else 0) < 1500 else 5),
+        "photo_url": telegram_user.get("photo_url", ""),
         "language": (account[3] if account and account[3] in ("uz", "ru", "en") else "uz"),
         "daily_claimed": daily_claimed,
         "referral_link": referral_link,
         "top10": leaders,
         "orders": []
     })
+
+
+async def api_presence(request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+    telegram_user = validate_webapp_init_data(payload.get("initData", ""))
+    if not telegram_user:
+        return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
+
+    user_id = int(telegram_user["id"])
+    now = time.time()
+    con = db()
+    cur = con.cursor()
+    try:
+        cur.execute(
+            """INSERT INTO app_presence(user_id, last_seen) VALUES(?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET last_seen=excluded.last_seen""",
+            (user_id, now)
+        )
+        cur.execute("DELETE FROM app_presence WHERE last_seen < ?", (now - 86400,))
+        cur.execute("SELECT COUNT(*) FROM app_presence WHERE last_seen >= ?", (now - 60,))
+        online_count = cur.fetchone()[0]
+        con.commit()
+        return web.json_response({"ok": True, "online": online_count})
+    except sqlite3.Error:
+        con.rollback()
+        return web.json_response({"error": "Faollik holatini yangilab bo‘lmadi"}, status=500)
+    finally:
+        con.close()
 
 
 async def api_set_language(request):
@@ -1967,6 +2008,7 @@ async def start_web_server():
     app = web.Application(middlewares=[require_channel_subscription])
     app.router.add_get("/", mini_app_home)
     app.router.add_post("/api/me", api_me)
+    app.router.add_post("/api/presence", api_presence)
     app.router.add_post("/api/language", api_set_language)
     app.router.add_post("/api/daily-claim", api_daily_claim)
     app.router.add_post("/api/promo", api_promo)
