@@ -1247,31 +1247,32 @@ async def api_rps_queue(request):
             (uid, uid)
         )
         own = cur.fetchone()
-        if own:
+        requested_room = str(payload.get("room_id", "")).strip().upper()[:12]
+        if own and not requested_room:
             room_id, pa, pb, status = own
-        else:
+        elif requested_room:
             cur.execute(
-                "SELECT room_id, player_a FROM rps_rooms "
-                "WHERE status='waiting' AND player_b IS NULL AND player_a<>? "
-                "ORDER BY updated_at ASC LIMIT 1",
-                (uid,)
+                "SELECT player_a, player_b, status FROM rps_rooms WHERE room_id=?",
+                (requested_room,)
             )
-            waiting = cur.fetchone()
-            if waiting:
-                room_id, pa = waiting
-                cur.execute(
-                    "UPDATE rps_rooms SET player_b=?, status='playing', updated_at=? "
-                    "WHERE room_id=? AND player_b IS NULL AND status='waiting'",
-                    (uid, time.time(), room_id)
-                )
-                pb, status = uid, "playing"
-            else:
-                room_id = uuid.uuid4().hex[:8].upper()
-                cur.execute(
-                    "INSERT INTO rps_rooms (room_id, player_a, updated_at) VALUES (?, ?, ?)",
-                    (room_id, uid, time.time())
-                )
-                pa, pb, status = uid, None, "waiting"
+            target = cur.fetchone()
+            if not target or target[2] != "waiting" or target[1] is not None or target[0] == uid:
+                con.rollback()
+                return web.json_response({"error": "Xona kodi noto‘g‘ri yoki xona band"}, status=404)
+            room_id, pa = requested_room, target[0]
+            cur.execute(
+                "UPDATE rps_rooms SET player_b=?, status='playing', updated_at=? "
+                "WHERE room_id=? AND player_b IS NULL AND status='waiting'",
+                (uid, time.time(), room_id)
+            )
+            pb, status = uid, "playing"
+        else:
+            room_id = uuid.uuid4().hex[:8].upper()
+            cur.execute(
+                "INSERT INTO rps_rooms (room_id, player_a, updated_at) VALUES (?, ?, ?)",
+                (room_id, uid, time.time())
+            )
+            pa, pb, status = uid, None, "waiting"
         con.commit()
         return web.json_response({
             "ok": True, "room_id": room_id,
