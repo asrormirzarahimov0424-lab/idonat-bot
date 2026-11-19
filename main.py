@@ -230,6 +230,20 @@ def init_db():
     """)
 
     cur.execute("""
+        CREATE TABLE IF NOT EXISTS chess_rooms (
+            room_id TEXT PRIMARY KEY,
+            player_white INTEGER NOT NULL,
+            player_black INTEGER,
+            fen TEXT NOT NULL,
+            moves TEXT NOT NULL DEFAULT '[]',
+            status TEXT NOT NULL DEFAULT 'waiting',
+            winner TEXT NOT NULL DEFAULT '',
+            updated_at REAL NOT NULL
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_chess_rooms_queue ON chess_rooms(status, updated_at)")
+
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS checkers_rooms (
             room_id TEXT PRIMARY KEY,
             player_x INTEGER NOT NULL,
@@ -1528,6 +1542,168 @@ async def api_xo_move(request):
         con.close()
 
 
+async def api_chess_queue(request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+    user = validate_webapp_init_data(payload.get("initData", ""))
+    if not user:
+        return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
+    uid = int(user["id"])
+    requested_room = str(payload.get("room_id", "")).strip().upper()[:12]
+    con = db()
+    cur = con.cursor()
+    try:
+        cur.execute("BEGIN IMMEDIATE")
+        cur.execute(
+            "UPDATE chess_rooms SET status='finished', winner='draw', updated_at=? "
+            "WHERE status IN ('waiting','playing') AND updated_at<?",
+            (time.time(), time.time() - 86400)
+        )
+        cur.execute(
+            "SELECT room_id, player_white, player_black, status FROM chess_rooms "
+            "WHERE (player_white=? OR player_black=?) AND status IN ('waiting','playing') "
+            "ORDER BY updated_at DESC LIMIT 1", (uid, uid)
+        )
+        own = cur.fetchone()
+        if own and not requested_room:
+            room_id, white, black, status = own
+        elif requested_room:
+            cur.execute(
+                "SELECT player_white, player_black, status FROM chess_rooms WHERE room_id=?",
+                (requested_room,)
+            )
+            target = cur.fetchone()
+            if not target or target[1] is not None or target[2] != "waiting" or target[0] == uid:
+                con.rollback()
+                return web.json_response({"error": "Xona kodi noto‘g‘ri yoki xona band"}, status=404)
+            room_id, white = requested_room, target[0]
+            cur.execute(
+                "UPDATE chess_rooms SET player_black=?, status='playing', updated_at=? "
+                "WHERE room_id=? AND player_black IS NULL AND status='waiting'",
+                (uid, time.time(), room_id)
+            )
+            black, status = uid, "playing"
+        else:
+            room_id = uuid.uuid4().hex[:8].upper()
+            initial_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+            cur.execute(
+                "INSERT INTO chess_rooms(room_id,player_white,fen,updated_at) VALUES(?,?,?,?)",
+                (room_id, uid, initial_fen, time.time())
+            )
+            white, black, status = uid, None, "waiting"
+        con.commit()
+        return web.json_response({
+            "ok": True, "room_id": room_id,
+            "color": "white" if white == uid else "black", "status": status
+        })
+    except sqlite3.Error:
+        con.rollback()
+        return web.json_response({"error": "Shaxmat xonasi yaratilmadi"}, status=500)
+    finally:
+        con.close()
+
+
+async def api_chess_state(request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+    user = validate_webapp_init_data(payload.get("initData", ""))
+    if not user:
+        return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
+    room_id = str(payload.get("room_id", ""))[:20]
+    uid = int(user["id"])
+    con = db()
+    cur = con.cursor()
+    try:
+        cur.execute(
+            "SELECT player_white,player_black,fen,moves,status,winner FROM chess_rooms WHERE room_id=?",
+            (room_id,)
+        )
+        row = cur.fetchone()
+    finally:
+        con.close()
+    if not row or uid not in (row[0], row[1]):
+        return web.json_response({"error": "Shaxmat xonasi topilmadi"}, status=404)
+    try:
+        board = chess.Board(row[2])
+        moves = json.loads(row[3])
+        outcome = board.outcome(claim_draw=True)
+        status = row[4]
+        winner = row[5]
+        if outcome:
+            status = "finished"
+            winner = "white" if outcome.winner else "black" if outcome.winner is False else "draw"
+        return web.json_response({
+            "ok": True, "fen": board.fen(), "moves": moves, "status": status,
+            "winner": winner, "color": "white" if uid == row[0] else "black",
+            "turn": "white" if board.turn else "black"
+        })
+    except (ValueError, TypeError):
+        return web.json_response({"error": "Shaxmat holati buzilgan"}, status=500)
+
+
+async def api_chess_move(request):
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"error": "Noto‘g‘ri so‘rov"}, status=400)
+    user = validate_webapp_init_data(payload.get("initData", ""))
+    if not user:
+        return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
+    room_id = str(payload.get("room_id", ""))[:20]
+    uci = str(payload.get("move", ""))[:5]
+    uid = int(user["id"])
+    con = db()
+    cur = con.cursor()
+    try:
+        cur.execute("BEGIN IMMEDIATE")
+        cur.execute(
+            "SELECT player_white,player_black,fen,moves,status FROM chess_rooms WHERE room_id=?",
+            (room_id,)
+        )
+        row = cur.fetchone()
+        if not row or uid not in (row[0], row[1]):
+            con.rollback()
+            return web.json_response({"error": "Shaxmat xonasi topilmadi"}, status=404)
+        white, black, fen, moves_json, status = row
+        if black is None or status != "playing":
+            con.rollback()
+            return web.json_response({"error": "Raqib hali ulanmagan"}, status=409)
+        if (uid == white) != (chess.Board(fen).turn == chess.WHITE):
+            con.rollback()
+            return web.json_response({"error": "Hozir sizning navbatingiz emas"}, status=409)
+        board = chess.Board(fen)
+        try:
+            move = chess.Move.from_uci(uci)
+        except ValueError:
+            con.rollback()
+            return web.json_response({"error": "Yurish noto‘g‘ri"}, status=400)
+        if move not in board.legal_moves:
+            con.rollback()
+            return web.json_response({"error": "Bu yurish shaxmat qoidalariga mos emas"}, status=409)
+        san = board.san(move)
+        board.push(move)
+        moves = json.loads(moves_json)
+        moves.append(san)
+        outcome = board.outcome(claim_draw=True)
+        next_status = "finished" if outcome else "playing"
+        winner = ("white" if outcome.winner else "black" if outcome.winner is False else "draw") if outcome else ""
+        cur.execute(
+            "UPDATE chess_rooms SET fen=?,moves=?,status=?,winner=?,updated_at=? WHERE room_id=?",
+            (board.fen(), json.dumps(moves), next_status, winner, time.time(), room_id)
+        )
+        con.commit()
+        return web.json_response({"ok": True, "status": next_status, "winner": winner})
+    except (sqlite3.Error, ValueError, TypeError):
+        con.rollback()
+        return web.json_response({"error": "Yurishni saqlab bo‘lmadi"}, status=500)
+    finally:
+        con.close()
+
+
 async def api_checkers_queue(request):
     try:
         payload = await request.json()
@@ -1801,6 +1977,9 @@ async def start_web_server():
     app.router.add_post("/api/xo/queue", api_xo_queue)
     app.router.add_post("/api/xo/state", api_xo_state)
     app.router.add_post("/api/xo/move", api_xo_move)
+    app.router.add_post("/api/chess/queue", api_chess_queue)
+    app.router.add_post("/api/chess/state", api_chess_state)
+    app.router.add_post("/api/chess/move", api_chess_move)
     app.router.add_post("/api/checkers/queue", api_checkers_queue)
     app.router.add_post("/api/checkers/state", api_checkers_state)
     app.router.add_post("/api/checkers/move", api_checkers_move)
