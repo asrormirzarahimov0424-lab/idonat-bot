@@ -76,3 +76,42 @@ def test_api_middleware_rejects_non_object_json():
     import asyncio
     response = asyncio.run(main.require_channel_subscription(Request(), handler))
     assert response.status == 400
+
+
+def test_order_api_rejects_services_not_offered_by_the_app():
+    class Request:
+        async def json(self):
+            return {
+                "initData": make_init_data(int(time.time())),
+                "service": "Fake service",
+                "details": "test"
+            }
+
+    import asyncio
+    response = asyncio.run(main.api_create_order(Request()))
+    assert response.status == 400
+
+
+def test_order_api_limits_bursts_per_user(tmp_path):
+    main.DB_NAME = str(tmp_path / "orders.sqlite3")
+    main.init_db()
+    init_data = make_init_data(int(time.time()))
+
+    class Request:
+        def __init__(self, payload):
+            self.payload = payload
+
+        async def json(self):
+            return self.payload
+
+    import asyncio
+    results = []
+    for i in range(6):
+        request = Request({
+            "initData": init_data,
+            "service": "PUBG UC",
+            "details": f"test order {i}"
+        })
+        results.append(asyncio.run(main.api_create_order(request)).status)
+
+    assert results == [200, 200, 200, 200, 200, 429]
