@@ -8,9 +8,11 @@
 
 /* iDonat original WebAudio music and UI sound effects */
 const IDONAT_TRACKS={
- neon:{name:'🎵 iDonat — Neon Pulse',tempo:112,notes:[220,261.63,329.63,392,329.63,261.63,196,261.63],bass:[110,110,130.81,98]},
- chill:{name:'🌙 iDonat — Chill Waves',tempo:82,notes:[196,246.94,293.66,369.99,293.66,246.94,174.61,220],bass:[98,123.47,87.31,110]},
- arcade:{name:'⚡ iDonat — Arcade Energy',tempo:128,notes:[261.63,329.63,392,523.25,392,329.63,293.66,440],bass:[130.81,164.81,196,146.83]}
+ newyear:{name:'🎄 iDonat — Yangi yil sehri',tempo:104,wave:'sine',bell:true,notes:[523.25,659.25,783.99,659.25,587.33,698.46,880,783.99,659.25,587.33,523.25,392],bass:[130.81,130.81,174.61,196],chords:[[261.63,329.63,392],[196,246.94,293.66],[220,261.63,329.63],[174.61,220,261.63]]},
+ pop:{name:'🎤 iDonat — Pop Vibes',tempo:116,wave:'triangle',notes:[392,440,523.25,587.33,523.25,440,392,329.63,392,523.25,587.33,659.25],bass:[98,110,130.81,87.31],chords:[[196,246.94,293.66],[220,261.63,329.63],[174.61,220,261.63],[196,246.94,293.66]]},
+ chill:{name:'🌙 iDonat — Chill Waves',tempo:78,wave:'sine',notes:[293.66,349.23,392,440,392,349.23,293.66,261.63,293.66,392,440,392],bass:[73.42,87.31,98,82.41],chords:[[146.83,174.61,220],[130.81,164.81,196],[174.61,220,261.63],[146.83,174.61,220]]},
+ neon:{name:'🎵 iDonat — Neon Pulse',tempo:112,wave:'triangle',notes:[220,261.63,329.63,392,329.63,261.63,196,261.63],bass:[110,110,130.81,98],chords:[[220,261.63,329.63],[196,246.94,293.66]]},
+ arcade:{name:'⚡ iDonat — Arcade Energy',tempo:128,wave:'triangle',notes:[261.63,329.63,392,523.25,392,329.63,293.66,440],bass:[130.81,164.81,196,146.83],chords:[[261.63,329.63,392],[196,246.94,293.66]]}
 };
 let idAudioCtx=null,idMaster=null,idMusicTimer=null,idStep=0,idTrack='neon',idPlaying=false,idSfx=true,idVolume=0.8;
 async function audioInit(){
@@ -32,11 +34,18 @@ function audioTone(freq,duration,type='sine',gain=.08,when=0){
  o.connect(g);g.connect(idMaster);o.start(t);o.stop(t+duration+.03)
 }
 function audioBeat(){
- if(!idPlaying||!idAudioCtx)return;const tr=IDONAT_TRACKS[idTrack],n=idStep%tr.notes.length;
- audioTone(tr.notes[n],.32,'triangle',.14);
- if(idStep%2===0)audioTone(tr.bass[(idStep/2)%tr.bass.length],.48,'sine',.18);
- if(idStep%4===0)audioTone(900,.05,'sine',.045,.01);
- idStep++
+ if(!idPlaying||!idAudioCtx)return;
+ const tr=IDONAT_TRACKS[idTrack],n=idStep%tr.notes.length;
+ const note=tr.notes[n],wave=tr.wave||'triangle';
+ audioTone(note,idTrack==='chill'?.48:.34,wave,idTrack==='chill'?.105:.13);
+ audioTone(note*2,idTrack==='newyear'?.42:.2,'sine',idTrack==='newyear'?.055:.018,.012);
+ if(idStep%2===0)audioTone(tr.bass[(Math.floor(idStep/2))%tr.bass.length],.52,'sine',.14);
+ if(idStep%4===0){
+  const chord=tr.chords[(Math.floor(idStep/4))%tr.chords.length];
+  chord.forEach((f,i)=>audioTone(f,.92,'triangle',idTrack==='chill'?.035:.045,i*.012));
+ }
+ if(tr.bell&&idStep%2===0){audioTone(note*2,.5,'sine',.075,.025);audioTone(note*3,.34,'sine',.025,.04)}
+ idStep++;
 }
 async function audioToggle(){
  if(idPlaying){audioPause();return}
@@ -247,7 +256,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
   </div>
  </div>
  <div class="audio-bottom">
-  <select id="audioTrack" aria-label="Musiqa tanlash" onchange="audioSelectTrack(this.value)"><option value="neon">Neon Pulse</option><option value="chill">Chill Waves</option><option value="arcade">Arcade Energy</option></select>
+  <select id="audioTrack" aria-label="Musiqa tanlash" onchange="audioSelectTrack(this.value)"><option value="newyear">🎄 Yangi yil sehri</option><option value="pop">🎤 Pop Vibes</option><option value="chill">🌙 Chill Waves</option><option value="neon">Neon Pulse</option><option value="arcade">Arcade Energy</option></select>
   <label>VOL <input id="audioVolume" type="range" min="0" max="100" value="35" oninput="audioSetVolume(this.value)"></label>
  </div>
 </aside>
