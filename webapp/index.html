@@ -303,7 +303,39 @@ button{
 }
 
 
-#profile .profile-head{align-items:center;gap:14px}.profile-photo{width:58px;height:58px;flex:0 0 58px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);background:#171717}.profile-level{display:inline-flex;margin-top:8px;padding:6px 10px;border:1px solid #8a6b2d;border-radius:999px;background:#211a0d;color:#f4cf75;font-size:12px;font-weight:700}#profileStats{grid-template-columns:repeat(2,minmax(0,1fr))}#onlineNow{display:flex;align-items:center;gap:8px;margin-top:12px;padding:9px 12px;border:1px solid #3c5c42;border-radius:13px;background:#101d14;color:#c8f4ce;font-size:12px;width:max-content;max-width:100%}#onlineNow .online-dot{width:8px;height:8px;border-radius:50%;background:#43d17b;box-shadow:0 0 10px #43d17b}</style></head>
+#profile .profile-head{align-items:center;gap:14px}.profile-photo{width:58px;height:58px;flex:0 0 58px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);background:#171717}.profile-level{display:inline-flex;margin-top:8px;padding:6px 10px;border:1px solid #8a6b2d;border-radius:999px;background:#211a0d;color:#f4cf75;font-size:12px;font-weight:700}#profileStats{grid-template-columns:repeat(2,minmax(0,1fr))}#onlineNow{display:flex;align-items:center;gap:8px;margin-top:12px;padding:9px 12px;border:1px solid #3c5c42;border-radius:13px;background:#101d14;color:#c8f4ce;font-size:12px;width:max-content;max-width:100%}#onlineNow .online-dot{width:8px;height:8px;border-radius:50%;background:#43d17b;box-shadow:0 0 10px #43d17b}
+/* Gramora-inspired wooden checkers game screen */
+#checkers{--wood:#3a2617;--wood2:#21170f;--cream:#e8d2ad;--gold2:#d8b76b;color:#f4e5c8;padding-bottom:16px}
+#checkers .ck-topline{display:flex;align-items:center;justify-content:space-between;margin:0 0 22px;padding:2px 3px}
+#checkers .ck-back,#checkers .ck-menu{width:42px;height:42px;padding:0;border-radius:50%;display:grid;place-items:center;background:linear-gradient(145deg,#392819,#21170f);border:1px solid #80613b;color:#f2dfb8;font-size:25px}
+#checkers .ck-brand{font-family:Georgia,serif;font-weight:900;font-size:19px;letter-spacing:2px;color:#e8d19d;text-shadow:0 2px 12px #c3944a55}
+#checkers .ck-brand span{color:#b99552}
+#checkers .ck-heading{text-align:center;font:800 13px Georgia,serif;letter-spacing:2px;color:#d9bd80;margin:0 0 18px}
+#checkers .ck-heading span{color:#8b7148;padding:0 5px}
+#checkers .ck-mode-panel{background:linear-gradient(145deg,#2c1e13,#17110c);border:1px solid #62482b;color:#f0dfc2}
+#checkers .ck-player{display:flex;align-items:center;gap:12px;padding:12px 14px;margin:14px 0;border-radius:19px;background:linear-gradient(145deg,#302216,#1c140e);border:1px solid #6c5031;box-shadow:0 8px 22px #0007,inset 0 1px 0 #ffffff12}
+#checkers .ck-player-self{border:2px solid #c9a85f;box-shadow:0 0 0 2px #c9a85f22,0 8px 24px #0008}
+#checkers .ck-avatar{width:47px;height:47px;flex:0 0 47px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 25%,#e6d4ae,#7b603b 70%);border:2px solid #d9bd80;color:#24180e;font-size:25px}
+#checkers .ck-player-meta{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+#checkers .ck-player-meta b{font-size:13px;letter-spacing:1.2px;color:#f3e2c2}
+#checkers .ck-player-meta span{font-size:11px;color:#bda985}
+#checkers .ck-player-mark{color:#5bd38c;text-shadow:0 0 10px #5bd38c;font-size:16px}
+#checkers .ck-board-wrap{padding:12px 10px 13px;border-radius:26px;background:linear-gradient(145deg,#49321f,#1c130c 75%);border:2px solid #8a6940;box-shadow:0 14px 35px #0009,inset 0 2px 5px #ffffff1b}
+#checkers .ck-turn{margin:0 auto 12px;width:fit-content;max-width:100%;padding:9px 17px;border-radius:30px;background:#173322;border:1px solid #3b8857;color:#a8edbd;font-size:12px;font-weight:850;text-align:center;box-shadow:0 0 15px #3b885722}
+#checkers .checker{max-width:100%;width:100%;margin:0 auto 13px;border:7px solid #25180f;border-radius:7px;gap:0;box-shadow:0 0 0 2px #b18a54,0 8px 20px #0009}
+#checkers .checker .sq{border-radius:0;aspect-ratio:1;background:#e6d0aa}
+#checkers .checker .sq.dark{background:#27221d}
+#checkers .checker .piece{width:78%;height:78%;border:3px solid #f4e8d0;background:radial-gradient(circle at 34% 25%,#fff9e9,#d8c8a9 54%,#8d806c);box-shadow:0 3px 5px #0008,inset 0 2px 3px #fff9}
+#checkers .checker .piece.black{border-color:#77716a;background:radial-gradient(circle at 34% 25%,#77736e,#282522 58%,#090807);box-shadow:0 3px 5px #000b,inset 0 2px 3px #ffffff30}
+#checkers .checker .piece.king:after{color:#d9b967;text-shadow:0 1px 2px #000;font-size:clamp(12px,4vw,20px)}
+#checkers .checker .sq.selected{outline:3px solid #d8b76b;outline-offset:-3px}
+#checkers .checker .sq.target{box-shadow:inset 0 0 0 3px #d8b76b}
+#checkers .ck-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+#checkers .ck-actions button{border:1px solid #80613b;background:linear-gradient(145deg,#392819,#21170f);color:#f1dfbd;font-weight:750}
+#checkers .ck-footer-note{text-align:center;color:#bba783;font-size:11px;margin:14px 8px 0}
+@media(max-width:390px){#checkers .ck-board-wrap{padding:8px 6px 10px}#checkers .checker{border-width:5px}#checkers .ck-player{padding:10px 11px}}
+
+</style></head>
 <body><main class="wrap">
 <header class="top"><div class="brand"><div class="logo">🤖</div><div>iDonat Robot <span class="tag">BETA</span><div class="muted" id="username">Mini App</div></div></div><select id="languageSelect" aria-label="Language" onchange="changeLanguage(this.value)"><option value="uz">🇺🇿 UZ</option><option value="ru">🇷🇺 RU</option><option value="en">🇬🇧 EN</option></select></header>
 <section id="home" class="page active">
@@ -320,11 +352,17 @@ button{
 
 <section id="agar" class="page"><button class="back" onclick="stopAgar();openPage('games')">← O‘yinlar</button><h2>🟢 Agar.io</h2><div class="panel"><div class="agar-hud"><span id="agarScore">Massa: 10</span><span id="agarRank">Raqiblar: 10</span></div><canvas id="agarCanvas" width="720" height="520" aria-label="Agar.io o‘yini"></canvas><p class="agar-help" id="agarStatus">Sharni barmog‘ingiz bilan kerakli tomonga boshqaring. Nuqtalarni yig‘ing va kichik raqiblarni yuting!</p><button class="primary" id="agarStart" style="width:100%;margin-top:12px" onclick="startAgar()">▶ O‘yinni boshlash</button></div></section>
 <section id="rps" class="page"><button class="back" onclick="openPage('games')">← O‘yinlar</button><h2>🪨📄✂️ Tosh–qaychi–qog‘oz</h2><div class="panel" id="rpsModes"><b>O‘yin turini tanlang</b><div class="list" style="margin-top:12px"><button class="primary" onclick="startRPS('bot')">🤖 Kompyuter bilan</button><button onclick="startOnlineRPS()">🌐 Do‘st bilan (onlayn)</button></div></div><div class="panel" id="rpsOnlinePanel" style="display:none"><div class="muted" id="rpsRoomCode"></div><label class="muted" for="rpsJoinCode">Do‘stingiz yuborgan xona kodi</label><input class="input" id="rpsJoinCode" maxlength="12" placeholder="XONA KODI" autocomplete="off"><button style="width:100%;margin-top:8px" onclick="joinOnlineRPS()">🔗 Kod orqali qo‘shilish</button></div><div class="panel" id="rpsPlay" style="display:none"><div class="row"><b id="rpsRoundTitle">1-raund</b><span class="tag" id="rpsModeLabel">Kompyuter</span></div><p class="muted" id="rpsInstruction">Tanlovingizni bosing</p><div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr));margin:14px 0"><button class="tile" onclick="pickRPS('rock')"><span class="emoji">🪨</span>Tosh</button><button class="tile" onclick="pickRPS('paper')"><span class="emoji">📄</span>Qog‘oz</button><button class="tile" onclick="pickRPS('scissors')"><span class="emoji">✂️</span>Qaychi</button></div><div class="panel" id="rpsResult" style="display:none;text-align:center"><div class="muted" id="rpsChoices"></div><h3 id="rpsOutcome"></h3></div><div class="row"><span id="rpsScore">Siz 0 : 0 Raqib</span><button onclick="resetRPS()">Qayta boshlash</button></div><button style="width:100%;margin-top:10px" onclick="showRPSModes()">Rejimni almashtirish</button></div></section>
-<section id="checkers" class="page"><button class="back" onclick="openPage('games')">← O‘yinlar</button><h2>♟️ Shashka</h2>
-<div class="panel" id="ckModes"><b>O‘yin turini tanlang</b><div class="list" style="margin-top:12px"><button class="primary" onclick="startOnlineCK()">👥 Odam bilan (onlayn)</button><button onclick="showAICK()">🤖 Kompyuter bilan</button></div></div>
-<div class="panel" id="ckAISettings" style="display:none"><b>Kompyuter qiyinligi</b><select class="input" id="ckDifficulty"><option value="1">1 — Juda oson</option><option value="2">2 — Oson</option><option value="3" selected>3 — O‘rtacha</option><option value="4">4 — Qiyin</option><option value="5">5 — Eng qiyin</option></select><button class="primary" onclick="startAICK()">O‘yinni boshlash</button></div>
-<div class="panel" id="ckOnlinePanel" style="display:none"><div class="muted" id="ckOnlineStatus">Xona yaratilyapti...</div><div class="muted" id="ckRoomCode"></div></div>
-<div class="panel" id="ckBoardPanel" style="display:none"><div class="muted" id="ckStatus">Oq donalar yuradi</div><div class="checker" id="checker"></div><button class="primary" onclick="resetCK()">Yangi o‘yin</button><button style="margin-left:6px" onclick="backCKOptions()">Rejimni almashtirish</button></div></section>
+<section id="checkers" class="page">
+<div class="ck-topline"><button class="ck-back" onclick="openPage('games')">‹</button><div class="ck-brand">GRAMORA <span>♟</span></div><div class="ck-menu">⋮</div></div>
+<div class="ck-heading">SHASHKA <span>•</span> ONLAYN O‘YIN</div>
+<div class="panel ck-mode-panel" id="ckModes"><b>O‘yin turini tanlang</b><div class="list" style="margin-top:12px"><button class="primary" onclick="startOnlineCK()">👥 Odam bilan (onlayn)</button><button onclick="showAICK()">🤖 Kompyuter bilan</button></div></div>
+<div class="panel ck-mode-panel" id="ckAISettings" style="display:none"><b>Kompyuter qiyinligi</b><select class="input" id="ckDifficulty"><option value="1">1 — Juda oson</option><option value="2">2 — Oson</option><option value="3" selected>3 — O‘rtacha</option><option value="4">4 — Qiyin</option><option value="5">5 — Eng qiyin</option></select><button class="primary" onclick="startAICK()">O‘yinni boshlash</button></div>
+<div class="panel ck-mode-panel" id="ckOnlinePanel" style="display:none"><div class="muted" id="ckOnlineStatus">Xona yaratilyapti...</div><div class="muted" id="ckRoomCode"></div></div>
+<div class="ck-player"><div class="ck-avatar">♟</div><div class="ck-player-meta"><b>RAQIB</b><span>Qora donalar</span></div><div class="ck-player-mark">●</div></div>
+<div class="ck-board-wrap" id="ckBoardPanel" style="display:none"><div class="ck-turn" id="ckStatus">Oq donalar yuradi</div><div class="checker" id="checker"></div><div class="ck-actions"><button onclick="resetCK()">↻ Yangi o‘yin</button><button onclick="backCKOptions()">⚙ Rejim</button></div></div>
+<div class="ck-player ck-player-self"><div class="ck-avatar">♟</div><div class="ck-player-meta"><b>SIZ</b><span>Oq donalar</span></div><div class="ck-player-mark">●</div></div>
+<div class="ck-footer-note">Yurish uchun donangizni, keyin boradigan katakni tanlang</div>
+</section>
 <section id="xo" class="page"><button class="back" onclick="openPage('games')">← O‘yinlar</button><h2>❌⭕ X-O</h2>
 <div class="panel" id="xoModes"><b>O‘yin turini tanlang</b><div class="list" style="margin-top:12px"><button class="primary" onclick="startOnlineXO()">👥 Odam bilan (onlayn)</button><button onclick="showAIMode()">🤖 Kompyuter bilan</button></div></div>
 <div class="panel" id="xoAISettings" style="display:none"><b>Kompyuter qiyinligi</b><select class="input" id="xoDifficulty"><option value="1">1 — Juda oson</option><option value="2">2 — Oson</option><option value="3" selected>3 — O‘rtacha</option><option value="4">4 — Qiyin</option><option value="5">5 — Professional</option></select><button class="primary" onclick="startAIXO()">O‘yinni boshlash</button></div>
