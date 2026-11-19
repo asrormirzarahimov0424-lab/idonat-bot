@@ -8,7 +8,7 @@
 
 /* iDonat original WebAudio music and UI sound effects */
 const IDONAT_TRACKS={
- mariah_dance:{name:'🎄 Mariah Carey — All I Want for Christmas Is You',appleMusic:'https://embed.music.apple.com/us/song/585972803',openUrl:'https://music.apple.com/us/song/585972803'}
+ mariah_dance:{name:'🎄 Mariah Carey — All I Want for Christmas Is You (New Dance Mix 2009) (New Dance Mix Extended 2009)',appleMusic:'https://embed.music.apple.com/us/song/1480780772',openUrl:'https://music.apple.com/us/song/1480780772'}
 };
 let idAudioCtx=null,idMaster=null,idMusicTimer=null,idStep=0,idTrack='mariah_dance',idPlaying=false,idSfx=true,idVolume=0.8;
 async function audioInit(){
@@ -62,6 +62,7 @@ async function audioToggle(){
   console.error('iDonat audio error:',err);
  }
 }
+function openOfficialMusic(e,url){if(tg?.openLink){e.preventDefault();tg.openLink(url);return false}return true}
 function audioPause(){idPlaying=false;if(idMusicTimer)clearInterval(idMusicTimer);idMusicTimer=null;const b=document.getElementById('audioPlay');if(b)b.textContent='▶';const st=document.getElementById('audioState');if(st)st.textContent='Pauza'}
 function toggleAudioDock(){const d=document.getElementById('audioDock');if(!d)return;d.classList.toggle('compact');const b=document.getElementById('audioCollapse');if(b){const compact=d.classList.contains('compact');b.textContent=compact?'⌃':'⌄';b.setAttribute('aria-label',compact?'Pleyerni yoyish':'Pleyerni yig‘ish')}}
 function audioStop(){audioPause();idStep=0;const st=document.getElementById('audioState');if(st)st.textContent='To‘xtatilgan'}
@@ -70,7 +71,7 @@ function audioSelectTrack(key){
  if(!IDONAT_TRACKS[key])return;const was=idPlaying;audioPause();idTrack=key;idStep=0;
  const track=IDONAT_TRACKS[key],player=document.getElementById('audioYoutubePlayer');
  document.getElementById('audioTrack').value=key;document.getElementById('audioTrackName').textContent=track.name;
- if(player){player.style.display=track.appleMusic?'block':'none';player.innerHTML=track.appleMusic?'<iframe title="Mariah Carey — All I Want for Christmas Is You" width="100%" height="175" src="'+track.appleMusic+'" allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write" frameborder="0" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" style="border:0;border-radius:12px;overflow:hidden;background:transparent"></iframe>':''}
+ if(player){player.style.display=track.appleMusic?'block':'none';player.innerHTML=track.appleMusic?'<iframe title="Mariah Carey — All I Want for Christmas Is You (New Dance Mix Extended 2009)" width="100%" height="175" src="'+track.appleMusic+'" allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write" frameborder="0" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" style="border:0;border-radius:12px;overflow:hidden;background:transparent"></iframe>':''}
  try{localStorage.setItem('idonat_audio_track',key)}catch(e){}
  if(track.appleMusic){document.getElementById('audioState').textContent='▶ bosing yoki pastdagi rasmiy havolani oching';return}
  if(was)audioToggle();else document.getElementById('audioState').textContent='Tanlandi · Ijro etish uchun ▶ bosing'
@@ -258,10 +259,10 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
   </div>
  </div>
  <div class="audio-bottom">
-  <select id="audioTrack" aria-label="Musiqa tanlash" onchange="audioSelectTrack(this.value)"><option value="mariah_dance">🎄 Mariah Carey · New Dance Mix</option></select>
+  <select id="audioTrack" aria-label="Musiqa tanlash" onchange="audioSelectTrack(this.value)"><option value="mariah_dance">🎄 Mariah Carey · New Dance Mix 2009</option></select>
   <label>VOL <input id="audioVolume" type="range" min="0" max="100" value="35" oninput="audioSetVolume(this.value)"></label>
  </div>
- <div id="audioYoutubePlayer" style="display:none;margin-top:8px;border-radius:12px;overflow:hidden"></div><a class="audio-open" href="https://music.apple.com/us/song/585972803" target="_blank" rel="noopener" onclick="if(tg?.openLink){event.preventDefault();tg.openLink(this.href)}">Apple Musicda qo‘shiqni ochish ↗</a>
+ <div id="audioYoutubePlayer" style="display:none;margin-top:8px;border-radius:12px;overflow:hidden"></div><a class="audio-open" href="https://music.apple.com/us/song/1480780772" target="_blank" rel="noopener" onclick="return openOfficialMusic(event,this.href)">Apple Musicda qo‘shiqni ochish ↗</a>
 </aside>
 <script>
 
