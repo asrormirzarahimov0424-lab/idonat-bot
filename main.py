@@ -105,10 +105,8 @@ async def finish_referral(user_id):
             if cur.rowcount == 1:
                 inviter = row[0]
                 if inviter and inviter != user_id:
-                    cur.execute(
-                        "UPDATE users SET balance=balance+100, referrals=referrals+1 WHERE user_id=?",
-                        (inviter,)
-                    )
+                    cur.execute("UPDATE users SET referrals=referrals+1 WHERE user_id=?", (inviter,))
+                    credit_balance(cur, inviter, 100, "referral", str(user_id))
         con.commit()
     except sqlite3.Error:
         con.rollback()
@@ -145,8 +143,32 @@ dp.message.middleware(AccessGate())
 
 
 def db():
-    # Wait briefly for concurrent Telegram/API requests instead of failing immediately.
-    return sqlite3.connect(DB_NAME, timeout=20)
+    # Use durable commits and wait briefly for concurrent Telegram/API requests.
+    con = sqlite3.connect(DB_NAME, timeout=20)
+    con.execute("PRAGMA busy_timeout=20000")
+    con.execute("PRAGMA synchronous=FULL")
+    return con
+
+
+def credit_balance(cur, user_id, amount, reason, reference):
+    """Credit a user's virtual balance and append an immutable audit row.
+    Caller must wrap this operation in the same SQLite transaction.
+    """
+    amount = int(amount)
+    if amount <= 0 or not reason or not reference:
+        raise ValueError("Balans qo‘shish ma’lumotlari noto‘g‘ri")
+    cur.execute("UPDATE users SET balance=balance+? WHERE user_id=?", (amount, user_id))
+    if cur.rowcount != 1:
+        raise ValueError("Foydalanuvchi hisobi topilmadi")
+    cur.execute("SELECT balance FROM users WHERE user_id=?", (user_id,))
+    balance_after = cur.fetchone()[0]
+    cur.execute(
+        "INSERT INTO balance_ledger (user_id, amount, balance_after, reason, reference, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (user_id, amount, balance_after, reason, reference,
+         datetime.now(ZoneInfo("Asia/Tashkent")).isoformat(timespec="seconds"))
+    )
+    return balance_after
 
 
 def init_db():
@@ -154,7 +176,7 @@ def init_db():
     con = db()
     cur = con.cursor()
     cur.execute("PRAGMA journal_mode=WAL")
-    cur.execute("PRAGMA synchronous=NORMAL")
+    cur.execute("PRAGMA synchronous=FULL")
     cur.execute("PRAGMA busy_timeout=20000")
 
     cur.execute("""
@@ -169,6 +191,20 @@ def init_db():
             referral_rewarded INTEGER DEFAULT 1
         )
     """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS balance_ledger (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            amount INTEGER NOT NULL CHECK(amount > 0),
+            balance_after INTEGER NOT NULL,
+            reason TEXT NOT NULL,
+            reference TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE(reason, reference)
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_balance_ledger_user ON balance_ledger(user_id, id DESC)")
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS app_presence (
@@ -592,10 +628,7 @@ async def redeem_promo(message: Message):
             await message.answer("❌ Siz bu promokoddan foydalangansiz.")
             return
 
-        cur.execute(
-            "UPDATE users SET balance=balance+? WHERE user_id=?",
-            (amount, user_id)
-        )
+        credit_balance(cur, user_id, amount, "promo", f"{user_id}:{code}")
 
         cur.execute(
             "UPDATE promo_codes SET used_count=used_count+1 WHERE code=?",
@@ -1100,9 +1133,9 @@ async def api_daily_claim(request):
             "INSERT INTO daily_bonus_claims (user_id, claim_date) VALUES (?, ?)",
             (user_id, today)
         )
-        cur.execute("UPDATE users SET balance=balance+50 WHERE user_id=?", (user_id,))
-        cur.execute("SELECT points, balance FROM users WHERE user_id=?", (user_id,))
-        points, balance = cur.fetchone()
+        balance = credit_balance(cur, user_id, 50, "daily_bonus", f"{user_id}:{today}")
+        cur.execute("SELECT points FROM users WHERE user_id=?", (user_id,))
+        points = cur.fetchone()[0]
         con.commit()
         return web.json_response({
             "ok": True,
@@ -1158,7 +1191,7 @@ async def api_promo(request):
             return web.json_response({"error": "Bu promokoddan avval foydalangansiz"}, status=409)
         cur.execute("INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)",
                     (user_id, telegram_user.get("username", "") or ""))
-        cur.execute("UPDATE users SET balance=balance+? WHERE user_id=?", (amount, user_id))
+        credit_balance(cur, user_id, amount, "promo", f"{user_id}:{code}")
         cur.execute("UPDATE promo_codes SET used_count=used_count+1 WHERE code=?", (code,))
         cur.execute("INSERT INTO promo_redemptions (user_id, code) VALUES (?, ?)", (user_id, code))
         cur.execute("SELECT balance FROM users WHERE user_id=?", (user_id,))
