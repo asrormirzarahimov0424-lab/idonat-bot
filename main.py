@@ -302,6 +302,21 @@ def main_keyboard(user_id=None):
       [KeyboardButton(text=t["balance"]),KeyboardButton(text=t["orders"])],[KeyboardButton(text=t["help"])]
     ],resize_keyboard=True)
 
+async def send_home_screen(target, user_id):
+    """Send the same home menu and Mini App launch options after every successful gate."""
+    await target.answer(tr(user_id, "home"), reply_markup=main_keyboard(user_id))
+    if WEBAPP_URL.startswith("https://"):
+        await target.answer(
+            tr(user_id, "mini"),
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(
+                    text=tr(user_id, "app"),
+                    web_app=WebAppInfo(url=WEBAPP_URL)
+                )
+            ]])
+        )
+
+
 def balance_keyboard(user_id=None):
     t=BOT_TEXT[user_language(user_id) if user_id else "uz"]
     return ReplyKeyboardMarkup(keyboard=[
@@ -355,11 +370,7 @@ async def start(message: Message):
         return
     await finish_referral(user_id)
     await set_chat_commands(message.chat.id, language)
-    await message.answer(tr(user_id, "home"), reply_markup=main_keyboard(user_id))
-    if WEBAPP_URL.startswith("https://"):
-        await message.answer("🚀 <b>Mini ilovani shu tugma orqali oching:</b>", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-            InlineKeyboardButton(text=tr(message.from_user.id, "app"), web_app=WebAppInfo(url=WEBAPP_URL))
-        ]]))
+    await send_home_screen(message, user_id)
 
 
 @dp.callback_query(F.data.startswith("lang:"))
@@ -380,7 +391,7 @@ async def choose_language(callback: CallbackQuery):
     subscribed = await is_subscribed(callback.from_user.id)
     if subscribed is True:
         await finish_referral(callback.from_user.id)
-        await callback.message.answer(tr(callback.from_user.id, "home"), reply_markup=main_keyboard(callback.from_user.id))
+        await send_home_screen(callback.message, callback.from_user.id)
     elif subscribed is False:
         await send_subscription_prompt(callback.message, callback.from_user.id)
     else:
@@ -393,11 +404,7 @@ async def check_subscription(callback: CallbackQuery):
     if subscribed is True:
         await finish_referral(callback.from_user.id)
         await callback.answer(tr(callback.from_user.id, "sub_ok"))
-        await callback.message.answer(tr(callback.from_user.id, "home"), reply_markup=main_keyboard(callback.from_user.id))
-        if WEBAPP_URL.startswith("https://"):
-            await callback.message.answer(tr(callback.from_user.id, "mini"), reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-                InlineKeyboardButton(text=tr(callback.from_user.id, "app"), web_app=WebAppInfo(url=WEBAPP_URL))
-            ]]))
+        await send_home_screen(callback.message, callback.from_user.id)
     elif subscribed is False:
         await callback.answer(tr(callback.from_user.id, "sub_no"), show_alert=True)
     else:
