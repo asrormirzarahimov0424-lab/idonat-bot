@@ -693,4 +693,20 @@ function chAI(){if(chEnded||chMode!=='ai')return;const s=chHistory[chHistory.len
 function chDraw(){const s=chHistory[chHistory.length-1],ms=chLegal(s),st=chStatus(chHistory);chEnded=st.done;document.getElementById('chessStatus').textContent=st.text;const board=document.getElementById('chessBoard');board.innerHTML='';const targets=chSelected>=0?ms.filter(m=>m[0]===chSelected).map(m=>m[1]):[];for(let i=0;i<64;i++){const idx=(i>>3)*16+(i&7),p=s.b[idx],b=document.createElement('button');b.type='button';b.className=((i>>3)+(i&7))%2?'dark':'';if(idx===chSelected)b.classList.add('selected');if(targets.includes(idx))b.classList.add('target');b.innerHTML='<span class="'+(CH_SIDE(p)===1?'whitePiece':'blackPiece')+'">'+(CH_G[p]||'')+'</span>';b.setAttribute('aria-label',CH_SQ(idx)+' '+(p==='.'?'bo‘sh':p));b.disabled=chEnded||(chMode==='ai'&&s.t===-1);b.onclick=()=>chClick(idx);board.appendChild(b)}const promo=document.getElementById('chessPromotion');promo.innerHTML='';if(chPending){['q','r','b','n'].forEach(q=>{const b=document.createElement('button');b.textContent=CH_G[q];b.onclick=()=>chChoosePromotion(q);promo.appendChild(b)})}document.getElementById('chessMoves').textContent=chMoves.length?'Yurishlar: '+chMoves.join(' · '):'Yurishlar tarixi shu yerda ko‘rinadi.'}
 
 drawCK();
+
+/* Reliable page navigation: keep existing game handlers intact. */
+window.openPage = function(id){
+  const target=document.getElementById(id);
+  if(!target || !target.classList.contains('page')) return;
+  try{if(id!=='xo' && typeof stopXOPoll==='function')stopXOPoll();}catch(e){console.warn('XO poll:',e);}
+  try{if(id!=='checkers' && typeof stopCKPoll==='function')stopCKPoll();}catch(e){console.warn('Checkers poll:',e);}
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  target.classList.add('active');
+  const tab=id==='services'?'services':id==='games'?'games':id==='profile'?'profile':'home';
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('sel',b.dataset.tab===tab));
+  try{if(id==='orders' && typeof loadOrders==='function')loadOrders();}catch(e){console.warn('Orders:',e);}
+  try{if(id==='profile' && typeof loadAccount==='function')loadAccount();}catch(e){console.warn('Profile:',e);}
+  try{if(window.Telegram?.WebApp?.BackButton){if(id==='home')Telegram.WebApp.BackButton.hide();else Telegram.WebApp.BackButton.show();}}catch(e){}
+  try{window.scrollTo({top:0,behavior:'instant'});}catch(e){window.scrollTo(0,0);}
+};
 </script></body></html>
