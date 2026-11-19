@@ -8,7 +8,7 @@
 
 /* iDonat original WebAudio music and UI sound effects */
 const IDONAT_TRACKS={
- mariah_dance:{name:'🎄 Mariah Carey — All I Want for Christmas Is You (New Dance Mix)',youtube:'MorJvNUDt6M'}
+ mariah_dance:{name:'🎄 Mariah Carey — All I Want for Christmas Is You',appleMusic:'https://embed.music.apple.com/us/song/585972803'}
 };
 let idAudioCtx=null,idMaster=null,idMusicTimer=null,idStep=0,idTrack='mariah_dance',idPlaying=false,idSfx=true,idVolume=0.8;
 async function audioInit(){
@@ -44,7 +44,7 @@ function audioBeat(){
  idStep++;
 }
 async function audioToggle(){
- if(IDONAT_TRACKS[idTrack]?.youtube){const st=document.getElementById('audioState');if(st)st.textContent='YouTube oynatgichidagi ▶ tugmasini bosing';return}
+ if(IDONAT_TRACKS[idTrack]?.appleMusic){const st=document.getElementById('audioState');if(st)st.textContent='Apple Music oynasidagi ▶ tugmasini bosing';return}
  if(idPlaying){audioPause();return}
  const state=document.getElementById('audioState'),button=document.getElementById('audioPlay');
  try{
@@ -69,9 +69,9 @@ function audioSelectTrack(key){
  if(!IDONAT_TRACKS[key])return;const was=idPlaying;audioPause();idTrack=key;idStep=0;
  const track=IDONAT_TRACKS[key],player=document.getElementById('audioYoutubePlayer');
  document.getElementById('audioTrack').value=key;document.getElementById('audioTrackName').textContent=track.name;
- if(player){player.style.display=track.youtube?'block':'none';player.innerHTML=track.youtube?'<iframe title="Christmas Sped Up music player" width="100%" height="90" src="https://www.youtube-nocookie.com/embed/'+track.youtube+'?playsinline=1&rel=0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>':''}
+ if(player){player.style.display=track.appleMusic?'block':'none';player.innerHTML=track.appleMusic?'<iframe title="Mariah Carey — All I Want for Christmas Is You" width="100%" height="175" src="'+track.appleMusic+'" allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write" frameborder="0" loading="lazy" style="border:0;border-radius:12px;overflow:hidden;background:transparent" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation-by-user-activation"></iframe>':''}
  try{localStorage.setItem('idonat_audio_track',key)}catch(e){}
- if(track.youtube){document.getElementById('audioState').textContent='YouTube player · ▶ tugmasini bosing';return}
+ if(track.appleMusic){document.getElementById('audioState').textContent='Apple Music · ▶ tugmasini bosing';return}
  if(was)audioToggle();else document.getElementById('audioState').textContent='Tanlandi · Ijro etish uchun ▶ bosing'
 }
 function audioSetVolume(v){idVolume=Math.max(0,Math.min(1,Number(v)/100));if(idMaster)idMaster.gain.setTargetAtTime(idVolume,idAudioCtx.currentTime,.03);try{localStorage.setItem('idonat_audio_volume',String(v))}catch(e){}}
