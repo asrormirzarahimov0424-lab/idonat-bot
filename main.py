@@ -190,7 +190,8 @@ def init_db():
             points INTEGER DEFAULT 0,
             inviter INTEGER DEFAULT 0,
             language TEXT DEFAULT '',
-            referral_rewarded INTEGER DEFAULT 1
+            referral_rewarded INTEGER DEFAULT 1,
+            welcome_sent INTEGER DEFAULT 1
         )
     """)
 
@@ -221,6 +222,9 @@ def init_db():
         cur.execute("ALTER TABLE users ADD COLUMN language TEXT DEFAULT ''")
     if "referral_rewarded" not in columns:
         cur.execute("ALTER TABLE users ADD COLUMN referral_rewarded INTEGER DEFAULT 1")
+    if "welcome_sent" not in columns:
+        # Existing accounts have already passed onboarding; greet only newly registered users.
+        cur.execute("ALTER TABLE users ADD COLUMN welcome_sent INTEGER DEFAULT 1")
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS promo_codes (
@@ -381,8 +385,19 @@ def main_keyboard(user_id=None):
     ],resize_keyboard=True)
 
 async def send_home_screen(target, user_id):
-    """Send the same home menu and Mini App launch options after every successful gate."""
-    await target.answer(tr(user_id, "home"), reply_markup=main_keyboard(user_id))
+    """Show the welcome message once, then keep the home menu available on every visit."""
+    con = db()
+    cur = con.cursor()
+    cur.execute("SELECT COALESCE(welcome_sent, 1) FROM users WHERE user_id=?", (user_id,))
+    row = cur.fetchone()
+    should_welcome = bool(row and row[0] == 0)
+    if should_welcome:
+        await target.answer(tr(user_id, "home"), reply_markup=main_keyboard(user_id))
+        cur.execute("UPDATE users SET welcome_sent=1 WHERE user_id=? AND welcome_sent=0", (user_id,))
+        con.commit()
+    else:
+        await target.answer(tr(user_id, "choose"), reply_markup=main_keyboard(user_id))
+    con.close()
     if WEBAPP_URL.startswith("https://"):
         await target.answer(
             tr(user_id, "mini"),
@@ -426,8 +441,8 @@ async def start(message: Message):
             inviter = 0
         cur.execute(
             """INSERT INTO users
-            (user_id, username, balance, referrals, points, inviter, language, referral_rewarded)
-            VALUES (?, ?, 0, 0, 0, ?, '', 0)""",
+            (user_id, username, balance, referrals, points, inviter, language, referral_rewarded, welcome_sent)
+            VALUES (?, ?, 0, 0, 0, ?, '', 0, 0)""",
             (user_id, username, inviter)
         )
         language = ""
