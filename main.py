@@ -395,6 +395,11 @@ async def start(message: Message):
         language = ""
     else:
         language = existing[1] or ""
+        # Existing users should never be asked to choose a language again.
+        # Older accounts with an empty language are safely assigned Uzbek.
+        if not language:
+            language = "uz"
+            cur.execute("UPDATE users SET language=? WHERE user_id=?", (language, user_id))
         cur.execute("UPDATE users SET username=? WHERE user_id=?", (username, user_id))
     con.commit()
     con.close()
