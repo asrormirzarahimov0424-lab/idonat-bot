@@ -22,6 +22,8 @@ Telegram bot va Telegram Mini App (Python, aiogram, aiohttp, SQLite).
 - Referal havolasi va referal TOP 10.
 - Promokod yaratish va bir foydalanuvchi uchun bir martalik ishlatish.
 - Buyurtma so‘rovini bazaga yozish, foydalanuvchiga ko‘rsatish va admin orqali holatini o‘zgartirish.
+- Balansga qo‘shilgan yangi mablag‘lar uchun audit jurnali va takroriy yozuvdan himoya.
+- Admin uchun `/backupdb` zaxira nusxasi va `/balancehistory USER_ID` balans tarixi.
 - X-O: kompyuterga qarshi 5 daraja va onlayn o‘yin.
 - Shashka: 8×8 rus qoidalari, kompyuterga qarshi 5 daraja va onlayn o‘yin.
 
@@ -40,5 +42,7 @@ GitHub Actions har bir push va pull requestda Python sintaksisini, asosiy o‘yi
 ## Xavfsizlik va saqlash
 
 - `BOT_TOKEN` ni GitHub'ga yoki chatga joylamang.
-- Railway'da SQLite ma'lumotlari saqlanib qolishi uchun persistent volume ulang va `DB_PATH` ni volume ichidagi faylga sozlang. Volume bo‘lmasa, qayta deploy yoki restartdan keyin lokal DB yo‘qolishi mumkin.
+- Railway'da SQLite ma'lumotlari saqlanib qolishi uchun persistent volume ulang va `DB_PATH=/data/idonat_robot.db` qilib sozlang. Volume bo‘lmasa, qayta deploy yoki restartdan keyin lokal DB yo‘qolishi mumkin.
+- Admin Telegram'da `/backupdb` yuborib, bazaning zaxira faylini olishi mumkin. Faylni Railway'dan tashqarida ham xavfsiz saqlang.
+- `/balancehistory USER_ID` faqat admin uchun; audit jurnali yangi kredit operatsiyalarini qayd etadi. Eski balanslar tarixini orqaga qarab tiklamaydi.
 - Real to‘lovni provayder sozlanib, sinovdan o‘tmaguncha qabul qilmang.
