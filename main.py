@@ -6,6 +6,7 @@ import hmac
 import html
 import hashlib
 import json
+import re
 import time
 import uuid
 from datetime import datetime, timedelta
@@ -509,6 +510,9 @@ async def cancel(message: Message):
 async def redeem_promo(message: Message):
     user_id = message.from_user.id
     code = message.text.strip().upper()
+    if not re.fullmatch(r"[A-Z0-9_-]{3,40}", code):
+        await message.answer("❌ Promokod 3–40 belgidan iborat bo‘lishi va faqat lotin harflari, raqam, _ yoki - ishlatishi kerak.")
+        return
 
     con = db()
     cur = con.cursor()
@@ -592,22 +596,28 @@ async def add_promo(message: Message):
         amount = int(parts[2])
         limit_count = int(parts[3])
 
-        if amount <= 0 or limit_count <= 0:
-            raise ValueError
+        if not re.fullmatch(r"[A-Z0-9_-]{3,40}", code):
+            await message.answer("❌ Kod 3–40 belgidan iborat bo‘lsin: A–Z, 0–9, _ yoki -.")
+            return
+        if not (1 <= amount <= 100_000_000) or not (1 <= limit_count <= 1_000_000):
+            await message.answer("❌ Miqdor 1–100 000 000 so‘m, limit esa 1–1 000 000 oralig‘ida bo‘lishi kerak.")
+            return
 
         con = db()
-        cur = con.cursor()
-        cur.execute(
-            "INSERT INTO promo_codes (code, amount, limit_count) VALUES (?, ?, ?)",
-            (code, amount, limit_count)
-        )
-        con.commit()
-        con.close()
+        try:
+            cur = con.cursor()
+            cur.execute(
+                "INSERT INTO promo_codes (code, amount, limit_count) VALUES (?, ?, ?)",
+                (code, amount, limit_count)
+            )
+            con.commit()
+        finally:
+            con.close()
 
         await message.answer("✅ Promokod yaratildi!")
 
     except ValueError:
-        await message.answer("❌ Miqdor va limit musbat son bo‘lishi kerak.")
+        await message.answer("❌ Miqdor va limit butun son bo‘lishi kerak.")
     except sqlite3.IntegrityError:
         await message.answer("❌ Bu promokod avval yaratilgan.")
 
@@ -1049,8 +1059,8 @@ async def api_promo(request):
     if not telegram_user:
         return web.json_response({"error": "Telegram orqali qayta oching"}, status=401)
     code = str(payload.get("code", "")).strip().upper()
-    if not code or len(code) > 40:
-        return web.json_response({"error": "Promokodni to‘g‘ri kiriting"}, status=400)
+    if not re.fullmatch(r"[A-Z0-9_-]{3,40}", code):
+        return web.json_response({"error": "Promokod 3–40 belgidan iborat bo‘lishi kerak"}, status=400)
     user_id = int(telegram_user["id"])
     con = db()
     cur = con.cursor()
