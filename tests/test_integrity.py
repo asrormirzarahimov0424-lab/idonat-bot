@@ -115,3 +115,30 @@ def test_order_api_limits_bursts_per_user(tmp_path):
         results.append(asyncio.run(main.api_create_order(request)).status)
 
     assert results == [200, 200, 200, 200, 200, 429]
+
+def test_balance_credit_is_audited_and_duplicate_reference_rolls_back(tmp_path):
+    main.DB_NAME = str(tmp_path / "ledger.sqlite3")
+    main.init_db()
+    con = sqlite3.connect(main.DB_NAME)
+    con.execute("INSERT INTO users (user_id, username) VALUES (2001, 'ledger-user')")
+    con.commit()
+
+    con.execute("BEGIN IMMEDIATE")
+    assert main.credit_balance(con.cursor(), 2001, 250, "test_credit", "order-1") == 250
+    con.commit()
+
+    con.execute("BEGIN IMMEDIATE")
+    try:
+        main.credit_balance(con.cursor(), 2001, 250, "test_credit", "order-1")
+    except sqlite3.IntegrityError:
+        con.rollback()
+    else:
+        raise AssertionError("Duplicate ledger reference should be rejected")
+
+    balance = con.execute("SELECT balance FROM users WHERE user_id=2001").fetchone()[0]
+    ledger = con.execute(
+        "SELECT amount, balance_after FROM balance_ledger WHERE user_id=2001"
+    ).fetchall()
+    con.close()
+    assert balance == 250
+    assert ledger == [(250, 250)]
