@@ -442,7 +442,7 @@ async function pollOnlineRPS(){
   const buttons=document.querySelectorAll('#rpsPlay .grid button');
   if(!d.opponent_connected){document.getElementById('rpsInstruction').textContent='Raqib kutilmoqda. Do‘stingiz ham shu Mini App’da onlayn o‘yinni bosing.';buttons.forEach(b=>b.disabled=true);return}
   if(d.resolved){
-   buttons.forEach(b=>b.disabled=true);
+   buttons.forEach(b=>b.disabled=false);
    const a=d.player===1?d.my_choice:d.opponent_choice,b=d.player===1?d.opponent_choice:d.my_choice;
    const win=rpsWinner(a,b);
    document.getElementById('rpsChoices').textContent='1-o‘yinchi: '+rpsNames[a]+' | 2-o‘yinchi: '+rpsNames[b];
