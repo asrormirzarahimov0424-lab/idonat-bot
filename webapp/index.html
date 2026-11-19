@@ -12,7 +12,8 @@ const IDONAT_TRACKS={
  pop:{name:'🎤 iDonat — Pop Vibes',tempo:116,wave:'triangle',notes:[392,440,523.25,587.33,523.25,440,392,329.63,392,523.25,587.33,659.25],bass:[98,110,130.81,87.31],chords:[[196,246.94,293.66],[220,261.63,329.63],[174.61,220,261.63],[196,246.94,293.66]]},
  chill:{name:'🌙 iDonat — Chill Waves',tempo:78,wave:'sine',notes:[293.66,349.23,392,440,392,349.23,293.66,261.63,293.66,392,440,392],bass:[73.42,87.31,98,82.41],chords:[[146.83,174.61,220],[130.81,164.81,196],[174.61,220,261.63],[146.83,174.61,220]]},
  neon:{name:'🎵 iDonat — Neon Pulse',tempo:112,wave:'triangle',notes:[220,261.63,329.63,392,329.63,261.63,196,261.63],bass:[110,110,130.81,98],chords:[[220,261.63,329.63],[196,246.94,293.66]]},
- arcade:{name:'⚡ iDonat — Arcade Energy',tempo:128,wave:'triangle',notes:[261.63,329.63,392,523.25,392,329.63,293.66,440],bass:[130.81,164.81,196,146.83],chords:[[261.63,329.63,392],[196,246.94,293.66]]}
+ arcade:{name:'⚡ iDonat — Arcade Energy',tempo:128,wave:'triangle',notes:[261.63,329.63,392,523.25,392,329.63,293.66,440],bass:[130.81,164.81,196,146.83],chords:[[261.63,329.63,392],[196,246.94,293.66]]},
+ mariah_sped:{name:'🎄 Mariah Carey — Christmas (Sped Up)',youtube:'Ka8_bk3iS3c'}
 };
 let idAudioCtx=null,idMaster=null,idMusicTimer=null,idStep=0,idTrack='neon',idPlaying=false,idSfx=true,idVolume=0.8;
 async function audioInit(){
@@ -48,6 +49,7 @@ function audioBeat(){
  idStep++;
 }
 async function audioToggle(){
+ if(IDONAT_TRACKS[idTrack]?.youtube){const st=document.getElementById('audioState');if(st)st.textContent='YouTube oynatgichidagi ▶ tugmasini bosing';return}
  if(idPlaying){audioPause();return}
  const state=document.getElementById('audioState'),button=document.getElementById('audioPlay');
  try{
@@ -70,8 +72,11 @@ function audioStop(){audioPause();idStep=0;const st=document.getElementById('aud
 function audioNext(){const keys=Object.keys(IDONAT_TRACKS),i=(keys.indexOf(idTrack)+1)%keys.length;audioSelectTrack(keys[i])}
 function audioSelectTrack(key){
  if(!IDONAT_TRACKS[key])return;const was=idPlaying;audioPause();idTrack=key;idStep=0;
- document.getElementById('audioTrack').value=key;document.getElementById('audioTrackName').textContent=IDONAT_TRACKS[key].name;
+ const track=IDONAT_TRACKS[key],player=document.getElementById('audioYoutubePlayer');
+ document.getElementById('audioTrack').value=key;document.getElementById('audioTrackName').textContent=track.name;
+ if(player){player.style.display=track.youtube?'block':'none';player.innerHTML=track.youtube?'<iframe title="Christmas Sped Up music player" width="100%" height="90" src="https://www.youtube-nocookie.com/embed/'+track.youtube+'?playsinline=1&rel=0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>':''}
  try{localStorage.setItem('idonat_audio_track',key)}catch(e){}
+ if(track.youtube){document.getElementById('audioState').textContent='YouTube player · ▶ tugmasini bosing';return}
  if(was)audioToggle();else document.getElementById('audioState').textContent='Tanlandi · Ijro etish uchun ▶ bosing'
 }
 function audioSetVolume(v){idVolume=Math.max(0,Math.min(1,Number(v)/100));if(idMaster)idMaster.gain.setTargetAtTime(idVolume,idAudioCtx.currentTime,.03);try{localStorage.setItem('idonat_audio_volume',String(v))}catch(e){}}
@@ -256,9 +261,10 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
   </div>
  </div>
  <div class="audio-bottom">
-  <select id="audioTrack" aria-label="Musiqa tanlash" onchange="audioSelectTrack(this.value)"><option value="newyear">🎄 Yangi yil sehri</option><option value="pop">🎤 Pop Vibes</option><option value="chill">🌙 Chill Waves</option><option value="neon">Neon Pulse</option><option value="arcade">Arcade Energy</option></select>
+  <select id="audioTrack" aria-label="Musiqa tanlash" onchange="audioSelectTrack(this.value)"><option value="newyear">🎄 Yangi yil sehri</option><option value="pop">🎤 Pop Vibes</option><option value="chill">🌙 Chill Waves</option><option value="neon">Neon Pulse</option><option value="arcade">Arcade Energy</option><option value="mariah_sped">🎄 All I Want for Christmas Is You · Sped Up</option></select>
   <label>VOL <input id="audioVolume" type="range" min="0" max="100" value="35" oninput="audioSetVolume(this.value)"></label>
  </div>
+ <div id="audioYoutubePlayer" style="display:none;margin-top:8px;border-radius:12px;overflow:hidden"></div>
 </aside>
 <script>
 
