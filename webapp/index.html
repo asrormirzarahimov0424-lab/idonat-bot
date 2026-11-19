@@ -12,7 +12,7 @@ const IDONAT_TRACKS={
  chill:{name:'🌙 iDonat — Chill Waves',tempo:82,notes:[196,246.94,293.66,369.99,293.66,246.94,174.61,220],bass:[98,123.47,87.31,110]},
  arcade:{name:'⚡ iDonat — Arcade Energy',tempo:128,notes:[261.63,329.63,392,523.25,392,329.63,293.66,440],bass:[130.81,164.81,196,146.83]}
 };
-let idAudioCtx=null,idMaster=null,idMusicTimer=null,idStep=0,idTrack='neon',idPlaying=false,idSfx=true,idVolume=0.35;
+let idAudioCtx=null,idMaster=null,idMusicTimer=null,idStep=0,idTrack='neon',idPlaying=false,idSfx=true,idVolume=0.8;
 async function audioInit(){
  const AC=window.AudioContext||window.webkitAudioContext;
  if(!AC)throw new Error('AudioContext qo‘llab-quvvatlanmaydi');
@@ -33,9 +33,9 @@ function audioTone(freq,duration,type='sine',gain=.08,when=0){
 }
 function audioBeat(){
  if(!idPlaying||!idAudioCtx)return;const tr=IDONAT_TRACKS[idTrack],n=idStep%tr.notes.length;
- audioTone(tr.notes[n],.28,'triangle',.035);
- if(idStep%2===0)audioTone(tr.bass[(idStep/2)%tr.bass.length],.42,'sine',.075);
- if(idStep%4===0)audioTone(900,.035,'sine',.012,.01);
+ audioTone(tr.notes[n],.32,'triangle',.14);
+ if(idStep%2===0)audioTone(tr.bass[(idStep/2)%tr.bass.length],.48,'sine',.18);
+ if(idStep%4===0)audioTone(900,.05,'sine',.045,.01);
  idStep++
 }
 async function audioToggle(){
