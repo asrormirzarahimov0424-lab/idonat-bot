@@ -57,6 +57,7 @@ function audioEffect(kind='tap'){
  }catch(e){}
  const sel=document.getElementById('audioTrack'),range=document.getElementById('audioVolume'),sfx=document.getElementById('audioSfx'),name=document.getElementById('audioTrackName');
  if(sel)sel.value=idTrack;if(range)range.value=Math.round(idVolume*100);if(sfx)sfx.textContent=idSfx?'🔊':'🔇';if(name)name.textContent=IDONAT_TRACKS[idTrack].name;
+ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.closest('#audioDock'))return;const t=(b.innerText||'').toLowerCase();audioEffect(/bonus|sovg‘a|sovga|yutuq|olish/.test(t)?'bonus':'tap')},true);
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&idPlaying)audioPause()});
 })();
 
