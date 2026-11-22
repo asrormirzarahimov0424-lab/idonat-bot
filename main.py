@@ -2212,9 +2212,10 @@ async def mini_app_home(request):
 
 async def health_check(request):
     """Report ready only when the SQLite database can actually be opened."""
+    con = None
     try:
-        with db() as con:
-            result = con.execute("PRAGMA quick_check").fetchone()
+        con = db()
+        result = con.execute("PRAGMA quick_check").fetchone()
         if not result or result[0] != "ok":
             return web.json_response(
                 {"ok": False, "app": "iDonat Robot", "database": "error"},
@@ -2229,6 +2230,9 @@ async def health_check(request):
             {"ok": False, "app": "iDonat Robot", "database": "unavailable"},
             status=503
         )
+    finally:
+        if con is not None:
+            con.close()
 
 
 async def start_web_server():
