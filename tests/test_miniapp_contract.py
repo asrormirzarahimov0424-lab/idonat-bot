@@ -29,17 +29,17 @@ def test_every_inline_click_handler_resolves_to_a_javascript_function():
     parser.feed(html)
 
     declared = set(re.findall(
-        r"(?:async\\s+)?function\\s+([A-Za-z_$][\\w$]*)\\s*\\(", html
+        r"(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(", html
     ))
     declared.update(re.findall(
-        r"(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*(?:async\\s*)?\\([^)]*\\)\\s*=>",
+        r"(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>",
         html,
     ))
 
     referenced = set()
     for handler in parser.handlers:
         referenced.update(re.findall(
-            r"(?:^|[;{]\\s*)([A-Za-z_$][\\w$]*)\\s*\\(", handler
+            r"(?:^|[;{]\s*)([A-Za-z_$][\w$]*)\s*\(", handler
         ))
 
     ignored = {"if", "for", "while", "switch"}
@@ -52,7 +52,7 @@ def test_every_open_page_target_exists_as_a_page_section():
     parser = MiniAppMarkup()
     parser.feed(html)
 
-    targets = set(re.findall(r"openPage\\(\\s*['\\\"]([^'\\\"]+)['\\\"]\\s*\\)", html))
+    targets = set(re.findall(r"openPage\(\s*['\"]([^'\"]+)['\"]\s*\)", html))
     missing = sorted(
         target for target in targets
         if target not in parser.pages
@@ -66,9 +66,9 @@ def test_frontend_api_calls_are_registered_by_the_backend():
     html = (ROOT / "webapp" / "index.html").read_text(encoding="utf-8")
     backend = (ROOT / "main.py").read_text(encoding="utf-8")
 
-    frontend_routes = set(re.findall(r"fetch\\(\\s*['\\\"](/api/[^'\\\"]+)['\\\"]", html))
+    frontend_routes = set(re.findall(r"fetch\(\s*['\"](/api/[^'\"]+)['\"]", html))
     backend_routes = set(re.findall(
-        r"app\\.router\\.add_post\\(\\s*['\\\"](/api/[^'\\\"]+)['\\\"]",
+        r"app\.router\.add_post\(\s*['\"](/api/[^'\"]+)['\"]",
         backend,
     ))
     missing = sorted(frontend_routes - backend_routes)
