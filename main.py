@@ -39,7 +39,8 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 WEBAPP_URL = os.getenv("WEBAPP_URL", "").strip()
 REQUIRED_CHANNEL = "@Cr7_Siu_Pubg"
-DB_NAME = os.getenv("DB_PATH", "idonat_robot.db")
+DB_PATH_CONFIGURED = bool(os.getenv("DB_PATH", "").strip())
+DB_NAME = os.getenv("DB_PATH", "idonat_robot.db").strip()
 
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN topilmadi!")
@@ -174,6 +175,8 @@ def credit_balance(cur, user_id, amount, reason, reference):
 
 
 def init_db():
+    if (os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_PROJECT_ID")) and not DB_PATH_CONFIGURED:
+        print("OGOHLANTIRISH: Railway uchun DB_PATH sozlanmagan. Balanslar yo‘qolmasligi uchun Persistent Volume ulang va DB_PATH=/data/idonat_robot.db qiling.")
     Path(DB_NAME).parent.mkdir(parents=True, exist_ok=True)
     con = db()
     cur = con.cursor()
@@ -2207,6 +2210,31 @@ async def mini_app_home(request):
     return web.FileResponse(page)
 
 
+async def health_check(request):
+    """Report ready only when the SQLite database can actually be opened."""
+    con = None
+    try:
+        con = db()
+        result = con.execute("PRAGMA quick_check").fetchone()
+        if not result or result[0] != "ok":
+            return web.json_response(
+                {"ok": False, "app": "iDonat Robot", "database": "error"},
+                status=503
+            )
+        return web.json_response(
+            {"ok": True, "app": "iDonat Robot", "database": "ok"}
+        )
+    except (sqlite3.Error, OSError) as exc:
+        print(f"Health check database error: {exc}")
+        return web.json_response(
+            {"ok": False, "app": "iDonat Robot", "database": "unavailable"},
+            status=503
+        )
+    finally:
+        if con is not None:
+            con.close()
+
+
 async def start_web_server():
     app = web.Application(middlewares=[require_channel_subscription])
     app.router.add_get("/", mini_app_home)
@@ -2230,7 +2258,7 @@ async def start_web_server():
     app.router.add_post("/api/checkers/state", api_checkers_state)
     app.router.add_post("/api/checkers/move", api_checkers_move)
     app.router.add_post("/api/checkers/resign", api_checkers_resign)
-    app.router.add_get("/health", lambda request: web.json_response({"ok": True, "app": "iDonat Robot"}))
+    app.router.add_get("/health", health_check)
     runner = web.AppRunner(app)
     await runner.setup()
     port = int(os.getenv("PORT", "8080"))

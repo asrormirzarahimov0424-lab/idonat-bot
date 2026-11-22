@@ -152,3 +152,24 @@ def test_navigation_stops_background_game_loops():
     navigation = html[start:end]
     for cleanup in ("stopXOPoll()", "stopCKPoll()", "stopRPSPoll()", "stopChessPoll()", "stopAgar()"):
         assert cleanup in navigation
+
+
+def test_health_check_reports_database_readiness(tmp_path):
+    import asyncio
+    import json
+
+    main.DB_NAME = str(tmp_path / "health.sqlite3")
+    main.init_db()
+    response = asyncio.run(main.health_check(None))
+    assert response.status == 200
+    assert json.loads(response.text)["database"] == "ok"
+
+
+def test_health_check_fails_when_database_cannot_be_opened(tmp_path):
+    import asyncio
+    import json
+
+    main.DB_NAME = str(tmp_path / "missing" / "health.sqlite3")
+    response = asyncio.run(main.health_check(None))
+    assert response.status == 503
+    assert json.loads(response.text)["database"] == "unavailable"

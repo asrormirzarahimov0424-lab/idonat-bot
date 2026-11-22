@@ -23,11 +23,12 @@ jobs:
           pip install -r requirements.txt pytest
       - name: Compile Python
         run: python -m py_compile main.py
-      - name: Run logic tests
+      - name: Run logic and Mini App contract tests
         env:
           BOT_TOKEN: "123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi"
+          ADMIN_ID: "0"
         run: pytest -q
-      - name: Check Mini App JavaScript syntax
+      - name: Check every inline Mini App JavaScript block
         run: |
           python - <<'PY'
           import re
@@ -36,6 +37,8 @@ jobs:
           scripts = re.findall(r"<script[^>]*>(.*?)</script>", html, re.S)
           if not scripts:
               raise SystemExit("No inline JavaScript found")
-          Path("/tmp/miniapp.js").write_text(scripts[-1], encoding="utf-8")
+          for index, script in enumerate(scripts):
+              Path(f"/tmp/miniapp-{index}.js").write_text(script, encoding="utf-8")
+          print(f"Extracted {len(scripts)} inline script blocks")
           PY
-          node --check /tmp/miniapp.js
+          for file in /tmp/miniapp-*.js; do node --check "$file"; done
